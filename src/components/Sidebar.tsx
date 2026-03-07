@@ -15,7 +15,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 <div style={{ width: '32px', height: '32px', background: 'var(--primary-main)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
                     M
                 </div>
-                <span className="logo-text">Mantis</span>
+                <span className="logo-text">CR Music</span>
             </div>
             
             <nav style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>

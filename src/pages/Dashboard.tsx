@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Users, ShoppingBag, DollarSign, Download } from 'lucide-react';
+import { TrendingUp, Users, ShoppingBag, DollarSign, Music } from 'lucide-react';
 import SalesChart from '../components/SalesChart';
 
 export default function Dashboard() {
@@ -18,21 +18,21 @@ export default function Dashboard() {
                     trendUp={true} 
                 />
                 <StatCard 
-                    title="Total Users" 
+                    title="Total Customers" 
                     value="78,250" 
                     icon={<Users size={20} />} 
                     trend="+70.5%" 
                     trendUp={true} 
                 />
                 <StatCard 
-                    title="Total Order" 
+                    title="Total Orders" 
                     value="18,800" 
                     icon={<ShoppingBag size={20} />} 
                     trend="-27.4%" 
                     trendUp={false} 
                 />
                 <StatCard 
-                    title="Total Sales" 
+                    title="Total Revenue" 
                     value="$35,078" 
                     icon={<DollarSign size={20} />} 
                     trend="+27.4%" 
@@ -43,7 +43,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
                 <div className="mantis-card" style={{ gridColumn: 'span 2' }}>
                     <div className="mantis-card-header">
-                        <h3 className="mantis-card-title">Income Overview</h3>
+                        <h3 className="mantis-card-title">Revenue Overview</h3>
                     </div>
                     <div className="mantis-card-body">
                          <SalesChart />
@@ -51,29 +51,35 @@ export default function Dashboard() {
                 </div>
                 <div className="mantis-card">
                     <div className="mantis-card-header">
-                        <h3 className="mantis-card-title">Analytics Report</h3>
+                        <h3 className="mantis-card-title">Top Categories</h3>
                     </div>
                     <div className="mantis-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                          <div>
                              <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
-                                 <span style={{ fontWeight: '500' }}>Company Finance Growth</span>
+                                 <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                     <Music size={14} /> Guitars
+                                 </span>
                                  <span className="badge badge-success">+45.14%</span>
                              </div>
-                             <div style={{ color: 'var(--text-secondary)' }}>You made an extra 35k this year.</div>
+                             <div style={{ color: 'var(--text-secondary)' }}>Best-selling category this month.</div>
                          </div>
                          <div>
                             <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
-                                 <span style={{ fontWeight: '500' }}>Company Expenses Ratio</span>
+                                 <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                     <Music size={14} /> Studio & Recording
+                                 </span>
+                                 <span className="badge badge-primary">+28.3%</span>
+                             </div>
+                             <div style={{ color: 'var(--text-secondary)' }}>Strong growth in home studio equipment.</div>
+                         </div>
+                         <div>
+                            <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
+                                 <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                     <Music size={14} /> Drums & Percussion
+                                 </span>
                                  <span className="badge badge-error">-0.5%</span>
                              </div>
-                             <div style={{ color: 'var(--text-secondary)' }}>You spend an extra 10k this year.</div>
-                         </div>
-                         <div>
-                            <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
-                                 <span style={{ fontWeight: '500' }}>Business Risk Cases</span>
-                                 <span className="badge badge-primary">Low</span>
-                             </div>
-                             <div style={{ color: 'var(--text-secondary)' }}>You have 2 less cases this year.</div>
+                             <div style={{ color: 'var(--text-secondary)' }}>Slight dip — restock planned.</div>
                          </div>
                     </div>
                 </div>
@@ -90,8 +96,8 @@ export default function Dashboard() {
                                 <thead>
                                     <tr>
                                         <th>Tracking No.</th>
-                                        <th>Product Name</th>
-                                        <th>Total Order</th>
+                                        <th>Instrument</th>
+                                        <th>Qty</th>
                                         <th>Status</th>
                                         <th>Total Amount</th>
                                     </tr>
@@ -99,31 +105,38 @@ export default function Dashboard() {
                                 <tbody>
                                     <tr>
                                         <td>#84564564</td>
-                                        <td>Camera Lens</td>
-                                        <td>40</td>
+                                        <td>Fender Stratocaster</td>
+                                        <td>2</td>
                                         <td><span className="badge badge-error">Rejected</span></td>
-                                        <td>$40,570</td>
+                                        <td>$2,998</td>
                                     </tr>
                                     <tr>
-                                        <td>#84564564</td>
-                                        <td>Laptop</td>
-                                        <td>300</td>
+                                        <td>#84564565</td>
+                                        <td>Yamaha P-515 Digital Piano</td>
+                                        <td>5</td>
                                         <td><span className="badge badge-warning">Pending</span></td>
-                                        <td>$180,139</td>
+                                        <td>$7,495</td>
                                     </tr>
                                     <tr>
-                                        <td>#84564564</td>
-                                        <td>Mobile</td>
-                                        <td>355</td>
+                                        <td>#84564566</td>
+                                        <td>Pearl Export Drum Kit</td>
+                                        <td>3</td>
                                         <td><span className="badge badge-success">Approved</span></td>
-                                        <td>$90,989</td>
+                                        <td>$2,697</td>
                                     </tr>
                                     <tr>
-                                        <td>#84564564</td>
-                                        <td>Macbook</td>
-                                        <td>16</td>
+                                        <td>#84564567</td>
+                                        <td>Shure SM7dB Microphone</td>
+                                        <td>8</td>
                                         <td><span className="badge badge-success">Approved</span></td>
-                                        <td>$10,800</td>
+                                        <td>$3,992</td>
+                                    </tr>
+                                    <tr>
+                                        <td>#84564568</td>
+                                        <td>Pioneer DDJ-REV7 Controller</td>
+                                        <td>1</td>
+                                        <td><span className="badge badge-primary">Processing</span></td>
+                                        <td>$1,299</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -149,7 +162,7 @@ function StatCard({ title, value, icon, trend, trendUp }: { title: string, value
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
                 <span className={`badge ${trendUp ? 'badge-primary' : 'badge-warning'}`}>{trend}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>You made an extra {trend} this year</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Compared to last month</span>
             </div>
         </div>
     );

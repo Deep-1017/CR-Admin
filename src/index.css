@@ -281,6 +281,32 @@ input, textarea, select {
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
+/* Alias for form-control used in instrument forms */
+.mantis-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color var(--transition-fast);
+  background: white;
+}
+.mantis-input:focus {
+  border-color: var(--primary-main);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  outline: none;
+}
+
+.btn-secondary {
+  background-color: white;
+  border-color: var(--border-main);
+  border: 1px solid var(--border-main);
+  color: var(--text-primary);
+}
+.btn-secondary:hover {
+  background-color: var(--secondary-light);
+}
+
 /* Header & Sidebar Specific */
 .logo-container {
   height: var(--header-height);

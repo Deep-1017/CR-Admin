@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Eye, Edit } from 'lucide-react';
+import { Eye } from 'lucide-react';
 
 export default function Orders() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const API_URL = 'http://localhost:5000/api/orders';
+    const API_URL = 'http://localhost:5000/api/v1/orders';
 
     useEffect(() => {
         fetchOrders();
@@ -50,7 +50,7 @@ export default function Orders() {
 
             <div className="mantis-card">
                 <div className="mantis-card-header">
-                    <h3 className="mantis-card-title">Recent Orders</h3>
+                    <h3 className="mantis-card-title">Recent Instrument Orders</h3>
                 </div>
                 {loading ? (
                     <div style={{ padding: '40px', textAlign: 'center' }}>Loading orders...</div>
@@ -70,7 +70,7 @@ export default function Orders() {
                             <tbody>
                                 {orders.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} style={{ textAlign: 'center', padding: '24px' }}>No orders found</td>
+                                        <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>No instrument orders found</td>
                                     </tr>
                                 ) : (
                                     orders.map(order => (
