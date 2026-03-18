@@ -1,365 +1,1180 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Plus, Edit, Trash2, Music } from 'lucide-react';
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Search,
+  Package,
+  AlertTriangle,
+  X,
+  Upload,
+  CheckCircle,
+} from "lucide-react";
+import { ToastContainer, type ToastType } from "../components/ui/Toast";
+import {
+  fetchProducts as fetchProductsApi,
+  createProduct as createProductApi,
+  updateProduct as updateProductApi,
+  deleteProduct as deleteProductApi,
+  type Product as ApiProduct,
+  type ProductPayload,
+} from "../api/products";
+import { uploadImage as uploadProductImage } from "../api/upload";
+import { formatINR } from "../lib/utils";
 
-const INSTRUMENT_CATEGORIES = [
-    'Guitars',
-    'Bass',
-    'Drums & Percussion',
-    'Keyboards & Pianos',
-    'Wind Instruments',
-    'String Instruments',
-    'DJ & Electronics',
-    'Studio & Recording',
-    'Accessories',
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  brand: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  description: string;
+  condition: string;
+   // Derived from backend fields
+  image?: string;
+  skillLevel?: string;
+  isActive: boolean;
+  onSale: boolean;
+}
+
+interface ToastMsg {
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+}
+
+type CategoryNode = {
+  label: string;
+  children?: string[];
+};
+
+const CATEGORY_TREE: CategoryNode[] = [
+  { label: "Amplifier", children: ["Amplifier", "Power Amplifier"] },
+  { label: "Microphone", children: ["Wired", "Wireless"] },
+  { label: "Mixers" },
+  {
+    label: "Portable Speakers",
+    children: ["Active Speaker", "Trolly Speaker"],
+  },
+  { label: "Speakers", children: ["Horn Speaker"] },
+  {
+    label: "Unit Driver",
+    children: ["Driver Unit", "Reflex Horn"],
+  },
+  {
+    label: "Drivers",
+    children: ["HF Drivers", "Tweeters", "Network Drivers"],
+  },
+  {
+    label: "Crossover",
+    children: ["Crossover", "Digital Crossover"],
+  },
+  { label: "Megaphones" },
+  { label: "Conference System", children: ["Wired", "Wireless"] },
+  { label: "Audio Splitter" },
+  { label: "Line Array Loudspeaker" },
+  {
+    label: "Intellection Speaker",
+    children: ["Wall Speaker", "Ceiling Speaker"],
+  },
+  {
+    label: "Stands",
+    children: ["Microphone Stands", "Speaker Stands"],
+  },
 ];
 
-const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Professional'];
-const CONDITIONS = ['New', 'Used - Like New', 'Used - Good', 'Used - Fair'];
-const BRANDS = ['Fender', 'Gibson', 'Yamaha', 'Roland', 'Pearl', 'Shure', 'Focusrite', 'Pioneer DJ', 'Music Man', 'Ludwig', 'Selmer', 'Ernie Ball', 'Numark', 'Sony', 'Other'];
+const CATEGORY_OPTIONS = CATEGORY_TREE.flatMap((node) =>
+  node.children ? [node.label, ...node.children] : [node.label],
+);
+const BRANDS = [
+  "Ahuja",
+  "StudioMaster",
+  "DynaTech",
+  "Digimore",
+  "NX Audio",
+  "P. Audio",
+  "Sound Craft",
+  "Stranger",
+  "Dbx",
+  "Pioneer",
+  "Dasska",
+  "Yamaha",
+  "Real Audio",
+  "ITS",
+  "A Plus",
+  "Tauras",
+  "Musimax",
+  "AudioTone",
+  "Sousys",
+  "NV mark",
+  "Dynamite",
+  "Nlabs",
+];
+
+
+const getStockInfo = (
+  stock: number,
+): { label: string; bg: string; color: string } => {
+  if (stock === 0)
+    return { label: "Out of Stock", bg: "#fee2e2", color: "#b91c1c" };
+  if (stock <= 5)
+    return { label: "Low Stock", bg: "#fef3c7", color: "#b45309" };
+  return { label: "In Stock", bg: "#dcfce7", color: "#15803d" };
+};
+
+const mapApiProductToUi = (product: ApiProduct): Product => ({
+  id: product.id,
+  name: product.name,
+  sku: product.id, // backend does not expose SKU; using id as a stable identifier
+  category: product.category,
+  brand: product.brand,
+  price: product.price,
+  originalPrice: product.originalPrice,
+  stock: product.stockCount,
+  description: product.description,
+  condition: product.condition,
+  image: product.image,
+  skillLevel: product.skillLevel,
+  isActive: product.inStock,
+  onSale: product.onSale ?? false,
+});
+
+const buildProductPayload = (data: Product): ProductPayload => {
+  const placeholderImage =
+    data.image ||
+    `https://via.placeholder.com/400x400.png?text=${encodeURIComponent(data.name)}`;
+
+  return {
+    name: data.name,
+    category: data.category,
+    price: data.price,
+    originalPrice: data.originalPrice,
+    onSale: data.onSale,
+    image: placeholderImage,
+    images: [],
+    description: data.description,
+    rating: 0,
+    reviews: 0,
+    brand: data.brand,
+    condition: data.condition,
+    skillLevel: data.skillLevel || "Beginner",
+    inStock: data.isActive,
+    stockCount: data.stock,
+    specifications: [],
+  };
+};
+
+const EmptyModal = ({
+  isOpen,
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  isOpen: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) => {
+  if (!isOpen) return null;
+  return (
+    <div
+      className="modal-overlay"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3
+            style={{
+              fontSize: "1.0625rem",
+              fontWeight: 700,
+              color: "#0f172a",
+              margin: 0,
+            }}
+          >
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#94a3b8",
+              padding: "0.25rem",
+              display: "flex",
+              borderRadius: 6,
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "#f1f5f9";
+              (e.currentTarget as HTMLElement).style.color = "#374151";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "none";
+              (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
+      </div>
+    </div>
+  );
+};
 
 export default function Products() {
-    const [products, setProducts] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<any>(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        category: 'Guitars',
-        price: '',
-        originalPrice: '',
-        onSale: false,
-        image: '',
-        description: '',
-        brand: 'Fender',
-        condition: 'New',
-        skillLevel: 'Beginner',
-        inStock: true,
-        stockCount: '',
-        specifications: [{ label: '', value: '' }],
-    });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [formData, setFormData] = useState<Partial<Product>>({
+    name: "",
+    sku: "",
+    category: "Amplifier",
+    brand: "Ahuja",
+    price: undefined,
+    stock: undefined,
+    description: "",
+    condition: "New",
+    isActive: true,
+    onSale: false,
+  });
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-    const API_URL = 'http://localhost:5000/api/v1/products';
-
-    useEffect(() => {
-        fetchProducts();
-    }, []);
-
-    const fetchProducts = async () => {
-        try {
-            const res = await axios.get(API_URL);
-            setProducts(res.data?.products || res.data);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching products', error);
-            setLoading(false);
-        }
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchProductsApi({ page, limit: 20 });
+        setProducts(data.products.map(mapApiProductToUi));
+        setTotal(data.total);
+        setPages(data.pages);
+      } catch (err: any) {
+        const message =
+          err?.response?.data?.message || "Failed to load products.";
+        setError(message);
+        addToast("error", "Unable to load products", message);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm('Are you sure you want to delete this instrument?')) {
-            try {
-                await axios.delete(`${API_URL}/${id}`);
-                fetchProducts();
-            } catch (error) {
-                console.error('Error deleting product', error);
-            }
-        }
-    };
+    loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
-    const handleEdit = (product: any) => {
-        setEditingProduct(product);
-        setFormData({
-            name: product.name || '',
-            category: product.category || 'Guitars',
-            price: product.price || '',
-            originalPrice: product.originalPrice || '',
-            onSale: product.onSale || false,
-            image: product.image || '',
-            description: product.description || '',
-            brand: product.brand || 'Fender',
-            condition: product.condition || 'New',
-            skillLevel: product.skillLevel || 'Beginner',
-            inStock: product.inStock !== undefined ? product.inStock : true,
-            stockCount: product.stockCount || '',
-            specifications: product.specifications?.length > 0 ? product.specifications : [{ label: '', value: '' }],
-        });
-        setShowForm(true);
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const payload = {
-            ...formData,
-            price: parseFloat(formData.price as string),
-            originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice as string) : undefined,
-            stockCount: formData.stockCount ? parseInt(formData.stockCount as string) : 0,
-            images: [formData.image],
-            rating: 0,
-            reviews: 0,
-            specifications: formData.specifications.filter(s => s.label && s.value),
-            customerReviews: [],
-        };
-        try {
-            if (editingProduct) {
-                await axios.put(`${API_URL}/${editingProduct.id}`, payload);
-            } else {
-                await axios.post(API_URL, payload);
-            }
-            setShowForm(false);
-            setEditingProduct(null);
-            resetForm();
-            fetchProducts();
-        } catch (error) {
-            console.error('Error saving product', error);
-        }
-    };
-
-    const resetForm = () => {
-        setFormData({
-            name: '',
-            category: 'Guitars',
-            price: '',
-            originalPrice: '',
-            onSale: false,
-            image: '',
-            description: '',
-            brand: 'Fender',
-            condition: 'New',
-            skillLevel: 'Beginner',
-            inStock: true,
-            stockCount: '',
-            specifications: [{ label: '', value: '' }],
-        });
-    };
-
-    const addSpecRow = () => {
-        setFormData(prev => ({ ...prev, specifications: [...prev.specifications, { label: '', value: '' }] }));
-    };
-
-    const updateSpec = (idx: number, field: 'label' | 'value', val: string) => {
-        const specs = [...formData.specifications];
-        specs[idx][field] = val;
-        setFormData(prev => ({ ...prev, specifications: specs }));
-    };
-
-    const removeSpec = (idx: number) => {
-        setFormData(prev => ({ ...prev, specifications: prev.specifications.filter((_, i) => i !== idx) }));
-    };
-
-    const skillLevelBadge = (level: string) => {
-        const colors: Record<string, string> = {
-            'Beginner': 'badge-success',
-            'Intermediate': 'badge-primary',
-            'Professional': 'badge badge-secondary',
-        };
-        return <span className={`badge ${colors[level] || 'badge-secondary'}`}>{level}</span>;
-    };
-
-    return (
-        <div>
-            <div className="flex justify-between items-center" style={{ marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>Instruments</h2>
-                <button className="btn btn-primary" onClick={() => { resetForm(); setEditingProduct(null); setShowForm(true); }}>
-                    <Plus size={16} />
-                    <span>Add Instrument</span>
-                </button>
-            </div>
-
-            {/* Add / Edit Form */}
-            {showForm && (
-                <div className="mantis-card" style={{ marginBottom: '24px' }}>
-                    <div className="mantis-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 className="mantis-card-title">{editingProduct ? 'Edit Instrument' : 'Add New Instrument'}</h3>
-                        <button onClick={() => { setShowForm(false); setEditingProduct(null); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text-secondary)' }}>×</button>
-                    </div>
-                    <div className="mantis-card-body">
-                        <form onSubmit={handleSubmit}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                                {/* Name */}
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Instrument Name *</label>
-                                    <input className="mantis-input" required value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Fender American Professional II Stratocaster" />
-                                </div>
-
-                                {/* Category */}
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Category *</label>
-                                    <select className="mantis-input" required value={formData.category} onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}>
-                                        {INSTRUMENT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-
-                                {/* Brand */}
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Brand *</label>
-                                    <select className="mantis-input" required value={formData.brand} onChange={e => setFormData(p => ({ ...p, brand: e.target.value }))}>
-                                        {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
-                                    </select>
-                                </div>
-
-                                {/* Price */}
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Price ($) *</label>
-                                    <input className="mantis-input" type="number" min="0" step="0.01" required value={formData.price} onChange={e => setFormData(p => ({ ...p, price: e.target.value }))} placeholder="e.g. 1499.00" />
-                                </div>
-
-                                {/* Original Price */}
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Original Price ($)</label>
-                                    <input className="mantis-input" type="number" min="0" step="0.01" value={formData.originalPrice} onChange={e => setFormData(p => ({ ...p, originalPrice: e.target.value }))} placeholder="Leave blank if not on sale" />
-                                </div>
-
-                                {/* Skill Level */}
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Skill Level *</label>
-                                    <select className="mantis-input" required value={formData.skillLevel} onChange={e => setFormData(p => ({ ...p, skillLevel: e.target.value }))}>
-                                        {SKILL_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </div>
-
-                                {/* Condition */}
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Condition *</label>
-                                    <select className="mantis-input" required value={formData.condition} onChange={e => setFormData(p => ({ ...p, condition: e.target.value }))}>
-                                        {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-
-                                {/* Stock Count */}
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Stock Count</label>
-                                    <input className="mantis-input" type="number" min="0" value={formData.stockCount} onChange={e => setFormData(p => ({ ...p, stockCount: e.target.value }))} placeholder="0" />
-                                </div>
-
-                                {/* In Stock & On Sale */}
-                                <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-                                        <input type="checkbox" checked={formData.inStock} onChange={e => setFormData(p => ({ ...p, inStock: e.target.checked }))} />
-                                        In Stock
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-                                        <input type="checkbox" checked={formData.onSale} onChange={e => setFormData(p => ({ ...p, onSale: e.target.checked }))} />
-                                        On Sale
-                                    </label>
-                                </div>
-
-                                {/* Image URL */}
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Image URL *</label>
-                                    <input className="mantis-input" required value={formData.image} onChange={e => setFormData(p => ({ ...p, image: e.target.value }))} placeholder="https://example.com/image.jpg or /assets/product.jpg" />
-                                </div>
-
-                                {/* Description */}
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Description *</label>
-                                    <textarea className="mantis-input" required rows={3} value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} placeholder="Describe the instrument..." style={{ resize: 'vertical' }} />
-                                </div>
-
-                                {/* Specifications */}
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                        <label style={{ fontWeight: '500', fontSize: '14px' }}>Specifications</label>
-                                        <button type="button" onClick={addSpecRow} className="btn btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }}>+ Add Row</button>
-                                    </div>
-                                    {formData.specifications.map((spec, idx) => (
-                                        <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                            <input className="mantis-input" value={spec.label} onChange={e => updateSpec(idx, 'label', e.target.value)} placeholder="Label (e.g. Body Material)" style={{ flex: 1 }} />
-                                            <input className="mantis-input" value={spec.value} onChange={e => updateSpec(idx, 'value', e.target.value)} placeholder="Value (e.g. Mahogany)" style={{ flex: 1 }} />
-                                            <button type="button" onClick={() => removeSpec(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error-main)', padding: '0 8px' }}>×</button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button type="submit" className="btn btn-primary">
-                                    {editingProduct ? 'Update Instrument' : 'Add Instrument'}
-                                </button>
-                                <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setEditingProduct(null); resetForm(); }}>
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Products Table */}
-            <div className="mantis-card">
-                <div className="mantis-card-header">
-                    <h3 className="mantis-card-title">All Instruments</h3>
-                </div>
-                {loading ? (
-                    <div style={{ padding: '40px', textAlign: 'center' }}>Loading instruments...</div>
-                ) : (
-                    <div className="mantis-table-wrapper" style={{ border: 'none' }}>
-                        <table className="mantis-table">
-                            <thead>
-                                <tr>
-                                    <th>Image</th>
-                                    <th>Name</th>
-                                    <th>Category</th>
-                                    <th>Brand</th>
-                                    <th>Skill Level</th>
-                                    <th>Condition</th>
-                                    <th>Price</th>
-                                    <th>Stock</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {products.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={9} style={{ textAlign: 'center', padding: '24px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
-                                                <Music size={32} />
-                                                <span>No instruments found. Add one or run the seeder.</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    products.map(product => (
-                                        <tr key={product.id}>
-                                            <td>
-                                                <img
-                                                    src={product.image}
-                                                    alt={product.name}
-                                                    style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
-                                                />
-                                            </td>
-                                            <td style={{ fontWeight: 500 }}>{product.name}</td>
-                                            <td><span className="badge badge-secondary">{product.category}</span></td>
-                                            <td>{product.brand}</td>
-                                            <td>{skillLevelBadge(product.skillLevel)}</td>
-                                            <td><span className="badge badge-primary" style={{ fontSize: '11px' }}>{product.condition}</span></td>
-                                            <td>
-                                                ${product.price?.toFixed(2)}
-                                                {product.onSale && <span className="badge badge-error" style={{ marginLeft: '6px', fontSize: '10px' }}>Sale</span>}
-                                            </td>
-                                            <td>
-                                                <span style={{ color: product.inStock ? 'var(--success-main)' : 'var(--error-main)', fontWeight: 500 }}>
-                                                    {product.inStock ? `✓ ${product.stockCount || 0}` : '✗ Out'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="flex gap-2">
-                                                    <button className="icon-btn" style={{ color: 'var(--primary-main)' }} onClick={() => handleEdit(product)}>
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button className="icon-btn" style={{ color: 'var(--error-main)' }} onClick={() => handleDelete(product.id)}>
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-        </div>
+  const addToast = (type: ToastType, title: string, message?: string) => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, title, message }]);
+    setTimeout(
+      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+      4000,
     );
+  };
+
+  const handleImageClick = () => {
+    if (isUploadingImage) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    try {
+      const { url } = await uploadProductImage(file);
+      setFormData((prev) => ({ ...prev, image: url }));
+      addToast("success", "Image Uploaded", "Product image has been uploaded.");
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message || "Failed to upload image. Try again.";
+      addToast("error", "Upload Failed", message);
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleOpenModal = (product?: Product) => {
+    if (product) {
+      setEditingId(product.id);
+      setFormData(product);
+    } else {
+      setEditingId(null);
+      setFormData({
+        name: "",
+        sku: "",
+        category: "Amplifier",
+        brand: "Fender",
+        price: undefined,
+        stock: undefined,
+        description: "",
+        condition: "New",
+        isActive: true,
+        onSale: false,
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name || !formData.price || formData.stock === undefined) {
+      addToast("error", "Validation Error", "Please fill all required fields");
+      return;
+    }
+    try {
+      const baseData: Product = {
+        id: editingId || "",
+        sku: formData.sku || "",
+        name: formData.name,
+        category: formData.category || "Amplifier",
+        brand: formData.brand || "Ahuja",
+        price: formData.price,
+        originalPrice: formData.originalPrice,
+        stock: formData.stock,
+        description: formData.description || "",
+        condition: formData.condition || "New",
+        image: formData.image,
+        skillLevel: formData.skillLevel,
+        isActive: formData.isActive ?? true,
+        onSale: formData.onSale ?? false,
+      };
+
+      if (editingId) {
+        const updated = await updateProductApi(
+          editingId,
+          buildProductPayload(baseData),
+        );
+        const mapped = mapApiProductToUi(updated);
+        setProducts((prev) =>
+          prev.map((p) => (p.id === editingId ? mapped : p)),
+        );
+        addToast("success", "Product Updated", "Changes saved successfully");
+      } else {
+        const created = await createProductApi(buildProductPayload(baseData));
+        const mapped = mapApiProductToUi(created);
+        setProducts((prev) => [...prev, mapped]);
+        setTotal((prev) => prev + 1);
+        addToast("success", "Product Added", "New product created");
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message || "Failed to save product. Try again.";
+      addToast("error", "Save Failed", message);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedProduct) {
+      try {
+        await deleteProductApi(selectedProduct.id);
+        setProducts((prev) => prev.filter((p) => p.id !== selectedProduct.id));
+        setTotal((prev) => Math.max(0, prev - 1));
+        addToast("success", "Product Deleted", "Product removed from catalog");
+      } catch (err: any) {
+        const message =
+          err?.response?.data?.message ||
+          "Failed to delete product. Please try again.";
+        addToast("error", "Delete Failed", message);
+      }
+      setIsDeleteModalOpen(false);
+      setSelectedProduct(null);
+    }
+  };
+
+  const filtered = products.filter((p) => {
+    const matchSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCat = !filterCategory || p.category === filterCategory;
+    return matchSearch && matchCat;
+  });
+
+  const inStock = products.filter((p) => p.stock > 5).length;
+  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 5).length;
+  const outOfStock = products.filter((p) => p.stock === 0).length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "2.25rem" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontSize: "1.625rem",
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.025em",
+              marginBottom: "0.25rem",
+            }}
+          >
+            Products
+          </h1>
+          <p style={{ color: "#64748b", margin: 0, fontSize: "0.9375rem" }}>
+            Manage your instrument inventory
+          </p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => handleOpenModal()}
+          style={{ gap: "0.5rem" }}
+        >
+          <Plus size={17} />
+          Add Product
+        </button>
+      </div>
+
+      {/* Summary Stats */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "0.875rem",
+        }}
+      >
+        {[
+          {
+            label: "Total Products",
+            value: products.length,
+            icon: Package,
+            color: "#4f46e5",
+            bg: "#eef2ff",
+          },
+          {
+            label: "In Stock",
+            value: inStock,
+            icon: CheckCircle,
+            color: "#22c55e",
+            bg: "#f0fdf4",
+          },
+          {
+            label: "Low Stock",
+            value: lowStock,
+            icon: AlertTriangle,
+            color: "#f59e0b",
+            bg: "#fffbeb",
+          },
+          {
+            label: "Out of Stock",
+            value: outOfStock,
+            icon: X,
+            color: "#ef4444",
+            bg: "#fef2f2",
+          },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div
+              key={s.label}
+              className="card"
+              style={{
+                padding: "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.875rem",
+              }}
+            >
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: s.bg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Icon size={18} style={{ color: s.color }} />
+              </div>
+              <div>
+                <p style={{ fontSize: "0.75rem", color: "#64748b", margin: 0 }}>
+                  {s.label}
+                </p>
+                <p
+                  style={{
+                    fontSize: "1.375rem",
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    margin: 0,
+                  }}
+                >
+                  {s.value}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Table Card */}
+      <div className="card" style={{ overflow: "hidden" }}>
+        {/* Filter Bar */}
+        <div
+          className="card-header"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              flex: 1,
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                flex: 1,
+                minWidth: 200,
+                maxWidth: 320,
+              }}
+            >
+              <Search
+                size={15}
+                style={{
+                  position: "absolute",
+                  left: "0.75rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94a3b8",
+                }}
+              />
+              <input
+                type="text"
+                className="input"
+                placeholder="Search products or SKU..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: "2.25rem", height: 38 }}
+              />
+            </div>
+            <select
+              className="select"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              style={{ width: "auto", minWidth: 160, height: 38 }}
+            >
+              <option value="">All Categories</option>
+              {CATEGORY_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            {(searchTerm || filterCategory) && (
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterCategory("");
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <p
+            style={{
+              fontSize: "0.8125rem",
+              color: "#94a3b8",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {filtered.length} product{filtered.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        {/* Table */}
+        {loading ? (
+          <div className="empty-state">
+            <Package size={40} style={{ color: "#cbd5e1" }} />
+            <h3
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+              }}
+            >
+              Loading products...
+            </h3>
+            <p style={{ color: "#94a3b8", margin: 0 }}>
+              Please wait while we fetch your catalog.
+            </p>
+          </div>
+        ) : error ? (
+          <div className="empty-state">
+            <AlertTriangle size={40} style={{ color: "#f97316" }} />
+            <h3
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+              }}
+            >
+              Unable to load products
+            </h3>
+            <p style={{ color: "#94a3b8", margin: 0 }}>
+              {error} Try refreshing the page.
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state">
+            <Package size={40} style={{ color: "#cbd5e1" }} />
+            <h3
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+              }}
+            >
+              No products found
+            </h3>
+            <p style={{ color: "#94a3b8", margin: 0 }}>
+              Try adjusting your search terms
+            </p>
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((product) => {
+                  const stockInfo = getStockInfo(product.stock);
+                  return (
+                    <tr key={product.id}>
+                      <td>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 8,
+                              background: "#eef2ff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Package size={20} style={{ color: "#4f46e5" }} />
+                          </div>
+                          <div>
+                            <p
+                              style={{
+                                fontWeight: 600,
+                                color: "#0f172a",
+                                margin: 0,
+                                fontSize: "0.875rem",
+                              }}
+                            >
+                              {product.name}
+                            </p>
+                            <p
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#94a3b8",
+                                margin: "1px 0 0",
+                                fontFamily: "monospace",
+                              }}
+                            >
+                              {product.sku}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          style={{ fontSize: "0.8125rem", color: "#64748b" }}
+                        >
+                          {product.category}
+                        </span>
+                      </td>
+                      <td>
+                        <div>
+                          <p
+                            style={{
+                              fontWeight: 700,
+                              color: "#0f172a",
+                              margin: 0,
+                            }}
+                          >
+                            {formatINR(product.price)}
+                          </p>
+                          {product.originalPrice && (
+                            <p
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#94a3b8",
+                                margin: 0,
+                                textDecoration: "line-through",
+                              }}
+                            >
+                              {formatINR(product.originalPrice)}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            padding: "0.1875rem 0.625rem",
+                            borderRadius: 99,
+                            fontSize: "0.75rem",
+                            fontWeight: 500,
+                            background: stockInfo.bg,
+                            color: stockInfo.color,
+                          }}
+                        >
+                          {stockInfo.label}{" "}
+                          {product.stock > 0 && `(${product.stock})`}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            padding: "0.1875rem 0.625rem",
+                            borderRadius: 99,
+                            fontSize: "0.75rem",
+                            fontWeight: 500,
+                            background: product.isActive
+                              ? "#dcfce7"
+                              : "#f1f5f9",
+                            color: product.isActive ? "#15803d" : "#64748b",
+                          }}
+                        >
+                          {product.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.25rem",
+                            justifyContent: "flex-end",
+                          }}
+                        >
+                          <button
+                            onClick={() => handleOpenModal(product)}
+                            className="btn btn-ghost btn-icon"
+                            title="Edit"
+                            style={{ color: "#64748b" }}
+                            onMouseEnter={(e) => {
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.background = "#eef2ff";
+                              (e.currentTarget as HTMLElement).style.color =
+                                "#4f46e5";
+                            }}
+                            onMouseLeave={(e) => {
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.background = "transparent";
+                              (e.currentTarget as HTMLElement).style.color =
+                                "#64748b";
+                            }}
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            className="btn btn-ghost btn-icon"
+                            title="Delete"
+                            style={{ color: "#64748b" }}
+                            onMouseEnter={(e) => {
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.background = "#fef2f2";
+                              (e.currentTarget as HTMLElement).style.color =
+                                "#dc2626";
+                            }}
+                            onMouseLeave={(e) => {
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.background = "transparent";
+                              (e.currentTarget as HTMLElement).style.color =
+                                "#64748b";
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        <div
+          className="card-footer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <p style={{ fontSize: "0.8125rem", color: "#94a3b8", margin: 0 }}>
+            Showing {products.length > 0 ? 1 : 0}–
+            {products.length} of {total || products.length} products
+          </p>
+          <div style={{ display: "flex", gap: "0.375rem" }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={loading || page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              ← Previous
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={loading || page >= pages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Add/Edit Modal */}
+      <EmptyModal
+        isOpen={isModalOpen}
+        title={editingId ? "Edit Product" : "Add New Product"}
+        onClose={() => setIsModalOpen(false)}
+        footer={
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleSave}>
+              {editingId ? "Update Product" : "Save Product"}
+            </button>
+          </>
+        }
+      >
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}
+        >
+          <div className="form-group">
+            <label className="label">Product Name *</label>
+            <input
+              type="text"
+              className="input"
+              placeholder="e.g., Fender Stratocaster"
+              value={formData.name || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+            />
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.875rem",
+            }}
+          >
+            <div className="form-group">
+              <label className="label">Category *</label>
+              <select
+                className="select"
+                value={formData.category || "Amplifier"}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
+              >
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Brand</label>
+              <select
+                className="select"
+                value={formData.brand || "Fender"}
+                onChange={(e) =>
+                  setFormData({ ...formData, brand: e.target.value })
+                }
+              >
+                {BRANDS.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.875rem",
+            }}
+          >
+            <div className="form-group">
+              <label className="label">Price (USD) *</label>
+              <input
+                type="number"
+                className="input"
+                placeholder="0"
+                value={formData.price || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: parseInt(e.target.value) })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label className="label">Stock Quantity *</label>
+              <input
+                type="number"
+                className="input"
+                placeholder="0"
+                value={formData.stock ?? ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock: parseInt(e.target.value) })
+                }
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="label">Description</label>
+            <textarea
+              className="textarea"
+              placeholder="Product description..."
+              value={formData.description || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+            />
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.875rem",
+            }}
+          >
+            <div className="form-group">
+              <label className="label">Status</label>
+              <select
+                className="select"
+                value={formData.isActive ? "active" : "inactive"}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    isActive: e.target.value === "active",
+                  })
+                }
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          {/* Image Upload */}
+          <div
+            style={{
+              border: "2px dashed #e2e8f0",
+              borderRadius: 10,
+              padding: "1.25rem",
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "border-color 0.15s",
+            }}
+            onClick={handleImageClick}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "#4f46e5";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0";
+            }}
+          >
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleImageChange}
+            />
+            <Upload
+              size={24}
+              style={{ color: "#94a3b8", marginBottom: "0.5rem" }}
+            />
+            <p style={{ fontSize: "0.8125rem", color: "#64748b", margin: 0 }}>
+              {isUploadingImage
+                ? "Uploading image..."
+                : formData.image
+                  ? "Image uploaded • Click to replace"
+                  : "Click to upload product image"}
+            </p>
+            <p
+              style={{
+                fontSize: "0.75rem",
+                color: "#94a3b8",
+                margin: "0.25rem 0 0",
+              }}
+            >
+              PNG, JPG, WebP up to 5MB
+            </p>
+            {formData.image && !isUploadingImage && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                }}
+              >
+                <img
+                  src={formData.image}
+                  alt="Product"
+                  style={{
+                    maxHeight: 96,
+                    borderRadius: 8,
+                    objectFit: "cover",
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </EmptyModal>
+
+      {/* Delete Confirmation Modal */}
+      <EmptyModal
+        isOpen={isDeleteModalOpen}
+        title="Delete Product"
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        footer={
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setSelectedProduct(null);
+              }}
+            >
+              Cancel
+            </button>
+            <button className="btn btn-danger" onClick={handleDelete}>
+              Delete Product
+            </button>
+          </>
+        }
+      >
+        {selectedProduct && (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
+            <p style={{ color: "#374151", margin: 0 }}>
+              Are you sure you want to delete{" "}
+              <strong style={{ color: "#0f172a" }}>
+                {selectedProduct.name}
+              </strong>
+              ?
+            </p>
+            <div
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                padding: "0.875rem",
+                display: "flex",
+                gap: "0.625rem",
+              }}
+            >
+              <AlertTriangle
+                size={16}
+                style={{ color: "#dc2626", flexShrink: 0, marginTop: 1 }}
+              />
+              <p style={{ fontSize: "0.875rem", color: "#b91c1c", margin: 0 }}>
+                This action cannot be undone. The product will be permanently
+                removed from your catalog.
+              </p>
+            </div>
+          </div>
+        )}
+      </EmptyModal>
+
+      <ToastContainer
+        toasts={toasts}
+        onClose={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+      />
+    </div>
+  );
 }

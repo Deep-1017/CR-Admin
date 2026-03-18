@@ -1,169 +1,544 @@
-import React from 'react';
-import { TrendingUp, Users, ShoppingBag, DollarSign, Music } from 'lucide-react';
-import SalesChart from '../components/SalesChart';
+import {
+  TrendingUp,
+  Users,
+  ShoppingBag,
+  DollarSign,
+  Music,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar,
+} from "lucide-react";
+import SalesChart from "../components/SalesChart";
+import { formatINR } from "../lib/utils";
+
+const stats = [
+  {
+    label: "Total Revenue",
+    value: 35078,
+    change: 27.4,
+    trend: "up",
+    icon: DollarSign,
+    color: "#4f46e5",
+    bg: "#eef2ff",
+    desc: "This month",
+  },
+  {
+    label: "Total Orders",
+    value: "18,800",
+    change: -12.4,
+    trend: "down",
+    icon: ShoppingBag,
+    color: "#f97316",
+    bg: "#fff7ed",
+    desc: "In progress",
+  },
+  {
+    label: "Total Customers",
+    value: "78,250",
+    change: 70.5,
+    trend: "up",
+    icon: Users,
+    color: "#22c55e",
+    bg: "#f0fdf4",
+    desc: "New this month",
+  },
+  {
+    label: "Page Views",
+    value: "442K",
+    change: 59.3,
+    trend: "up",
+    icon: TrendingUp,
+    color: "#8b5cf6",
+    bg: "#f5f3ff",
+    desc: "From last month",
+  },
+];
+
+const recentOrders = [
+  {
+    id: "#84564564",
+    product: "Fender Stratocaster",
+    qty: 2,
+    status: "Rejected",
+    amount: 2998,
+  },
+  {
+    id: "#84564565",
+    product: "Yamaha P-515 Digital Piano",
+    qty: 5,
+    status: "Pending",
+    amount: 7495,
+  },
+  {
+    id: "#84564566",
+    product: "Pearl Export Drum Kit",
+    qty: 3,
+    status: "Approved",
+    amount: 2697,
+  },
+  {
+    id: "#84564567",
+    product: "Shure SM7dB Microphone",
+    qty: 8,
+    status: "Approved",
+    amount: 3992,
+  },
+  {
+    id: "#84564568",
+    product: "Pioneer DDJ-REV7 Controller",
+    qty: 1,
+    status: "Processing",
+    amount: 1299,
+  },
+];
+
+const topCategories = [
+  {
+    name: "Amplifier",
+    trend: 45.14,
+    description: "Top seller for live setups this month.",
+  },
+  {
+    name: "Microphone",
+    trend: 28.3,
+    description: "Strong demand for studio and stage microphones.",
+  },
+  {
+    name: "Portable Speaker",
+    trend: -0.5,
+    description: "Slight dip, but still a popular category.",
+  },
+];
+
+const statusStyle: Record<string, { bg: string; color: string }> = {
+  approved: { bg: "#dcfce7", color: "#15803d" },
+  pending: { bg: "#fef3c7", color: "#b45309" },
+  rejected: { bg: "#fee2e2", color: "#b91c1c" },
+  processing: { bg: "#e0e7ff", color: "#4338ca" },
+};
 
 export default function Dashboard() {
-    return (
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "2.25rem" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}
+      >
         <div>
-            <div className="flex justify-between items-center" style={{ marginBottom: '24px' }}>
-                 <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>Dashboard</h2>
-            </div>
-            
-            <div className="grid grid-cols-4 gap-4" style={{ marginBottom: '24px' }}>
-                <StatCard 
-                    title="Total Page Views" 
-                    value="4,42,236" 
-                    icon={<TrendingUp size={20} />} 
-                    trend="+59.3%" 
-                    trendUp={true} 
-                />
-                <StatCard 
-                    title="Total Customers" 
-                    value="78,250" 
-                    icon={<Users size={20} />} 
-                    trend="+70.5%" 
-                    trendUp={true} 
-                />
-                <StatCard 
-                    title="Total Orders" 
-                    value="18,800" 
-                    icon={<ShoppingBag size={20} />} 
-                    trend="-27.4%" 
-                    trendUp={false} 
-                />
-                <StatCard 
-                    title="Total Revenue" 
-                    value="$35,078" 
-                    icon={<DollarSign size={20} />} 
-                    trend="+27.4%" 
-                    trendUp={true} 
-                />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4" style={{ marginBottom: '24px' }}>
-                <div className="mantis-card" style={{ gridColumn: 'span 2' }}>
-                    <div className="mantis-card-header">
-                        <h3 className="mantis-card-title">Revenue Overview</h3>
-                    </div>
-                    <div className="mantis-card-body">
-                         <SalesChart />
-                    </div>
-                </div>
-                <div className="mantis-card">
-                    <div className="mantis-card-header">
-                        <h3 className="mantis-card-title">Top Categories</h3>
-                    </div>
-                    <div className="mantis-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                         <div>
-                             <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
-                                 <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                     <Music size={14} /> Guitars
-                                 </span>
-                                 <span className="badge badge-success">+45.14%</span>
-                             </div>
-                             <div style={{ color: 'var(--text-secondary)' }}>Best-selling category this month.</div>
-                         </div>
-                         <div>
-                            <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
-                                 <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                     <Music size={14} /> Studio & Recording
-                                 </span>
-                                 <span className="badge badge-primary">+28.3%</span>
-                             </div>
-                             <div style={{ color: 'var(--text-secondary)' }}>Strong growth in home studio equipment.</div>
-                         </div>
-                         <div>
-                            <div className="flex justify-between items-center" style={{ marginBottom: '8px' }}>
-                                 <span style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                     <Music size={14} /> Drums & Percussion
-                                 </span>
-                                 <span className="badge badge-error">-0.5%</span>
-                             </div>
-                             <div style={{ color: 'var(--text-secondary)' }}>Slight dip — restock planned.</div>
-                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1" style={{ gap: '24px' }}>
-                <div className="mantis-card" style={{ gridColumn: 'span 2' }}>
-                    <div className="mantis-card-header">
-                        <h3 className="mantis-card-title">Recent Orders</h3>
-                    </div>
-                    <div className="mantis-card-body" style={{ padding: '0' }}>
-                        <div className="mantis-table-wrapper" style={{ border: 'none', borderRadius: '0' }}>
-                            <table className="mantis-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tracking No.</th>
-                                        <th>Instrument</th>
-                                        <th>Qty</th>
-                                        <th>Status</th>
-                                        <th>Total Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>#84564564</td>
-                                        <td>Fender Stratocaster</td>
-                                        <td>2</td>
-                                        <td><span className="badge badge-error">Rejected</span></td>
-                                        <td>$2,998</td>
-                                    </tr>
-                                    <tr>
-                                        <td>#84564565</td>
-                                        <td>Yamaha P-515 Digital Piano</td>
-                                        <td>5</td>
-                                        <td><span className="badge badge-warning">Pending</span></td>
-                                        <td>$7,495</td>
-                                    </tr>
-                                    <tr>
-                                        <td>#84564566</td>
-                                        <td>Pearl Export Drum Kit</td>
-                                        <td>3</td>
-                                        <td><span className="badge badge-success">Approved</span></td>
-                                        <td>$2,697</td>
-                                    </tr>
-                                    <tr>
-                                        <td>#84564567</td>
-                                        <td>Shure SM7dB Microphone</td>
-                                        <td>8</td>
-                                        <td><span className="badge badge-success">Approved</span></td>
-                                        <td>$3,992</td>
-                                    </tr>
-                                    <tr>
-                                        <td>#84564568</td>
-                                        <td>Pioneer DDJ-REV7 Controller</td>
-                                        <td>1</td>
-                                        <td><span className="badge badge-primary">Processing</span></td>
-                                        <td>$1,299</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          <h1
+            style={{
+              fontSize: "1.625rem",
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.025em",
+              marginBottom: "0.25rem",
+            }}
+          >
+            Dashboard
+          </h1>
+          <p style={{ color: "#64748b", margin: 0, fontSize: "0.9375rem" }}>
+            Welcome back! Here's your business overview and performance metrics.
+          </p>
         </div>
-    );
-}
-
-function StatCard({ title, value, icon, trend, trendUp }: { title: string, value: string, icon: React.ReactNode, trend: string, trendUp: boolean }) {
-    return (
-        <div className="mantis-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
-            <div className="flex items-center justify-between">
-                <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>{title}</span>
-                <div style={{ color: 'white', background: 'var(--primary-main)', borderRadius: '8px', padding: '8px', display: 'flex' }}>
-                    {icon}
-                </div>
-            </div>
-            
-            <div style={{ fontSize: '24px', fontWeight: '700' }}>{value}</div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                <span className={`badge ${trendUp ? 'badge-primary' : 'badge-warning'}`}>{trend}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>Compared to last month</span>
-            </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.5rem 0.875rem",
+            background: "#fff",
+            border: "1px solid #e2e8f0",
+            borderRadius: 8,
+            fontSize: "0.875rem",
+            color: "#64748b",
+            fontWeight: 500,
+          }}
+        >
+          <Calendar size={15} />
+          March 10, 2026
         </div>
-    );
+      </div>
+
+      {/* Stat Cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: "1rem",
+        }}
+      >
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          const isUp = stat.trend === "up";
+          return (
+            <div key={stat.label} className="stat-card">
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    background: stat.bg,
+                    borderRadius: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon size={20} style={{ color: stat.color }} />
+                </div>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.125rem",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: 99,
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    background: isUp ? "#dcfce7" : "#fee2e2",
+                    color: isUp ? "#15803d" : "#b91c1c",
+                  }}
+                >
+                  {isUp ? (
+                    <ArrowUpRight size={13} />
+                  ) : (
+                    <ArrowDownRight size={13} />
+                  )}
+                  {Math.abs(stat.change)}%
+                </span>
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: "0.8125rem",
+                    color: "#64748b",
+                    marginBottom: "0.25rem",
+                    margin: 0,
+                  }}
+                >
+                  {stat.label}
+                </p>
+                <p
+                  style={{
+                    fontSize: "1.625rem",
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    margin: "0.25rem 0 0",
+                    letterSpacing: "-0.025em",
+                  }}
+                >
+                  {typeof stat.value === "number" ? formatINR(stat.value) : stat.value}
+                </p>
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#94a3b8",
+                    margin: "0.125rem 0 0",
+                  }}
+                >
+                  {stat.desc}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Charts Row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1fr) 320px",
+          gap: "1rem",
+          alignItems: "start",
+        }}
+      >
+        {/* Revenue Chart */}
+        <div className="card" style={{ overflow: "hidden" }}>
+          <div
+            className="card-header"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  margin: 0,
+                }}
+              >
+                Revenue Overview
+              </h3>
+              <p
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "#94a3b8",
+                  margin: "0.125rem 0 0",
+                }}
+              >
+                Monthly revenue performance
+              </p>
+            </div>
+            <select
+              className="select"
+              style={{ width: "auto", paddingLeft: "0.75rem" }}
+            >
+              <option>This Week</option>
+              <option selected>This Month</option>
+              <option>This Year</option>
+            </select>
+          </div>
+          <div className="card-body">
+            <div style={{ height: 280 }}>
+              <SalesChart />
+            </div>
+          </div>
+        </div>
+
+        {/* Top Categories */}
+        <div className="card">
+          <div className="card-header">
+            <h3
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+              }}
+            >
+              Top Categories
+            </h3>
+            <p
+              style={{
+                fontSize: "0.8125rem",
+                color: "#94a3b8",
+                margin: "0.125rem 0 0",
+              }}
+            >
+              Best performing this month
+            </p>
+          </div>
+          <div
+            className="card-body"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1.125rem",
+            }}
+          >
+            {topCategories.map((cat, i) => {
+              const isUp = cat.trend > 0;
+              return (
+                <div
+                  key={cat.name}
+                  style={{
+                    paddingBottom:
+                      i < topCategories.length - 1 ? "1.125rem" : 0,
+                    borderBottom:
+                      i < topCategories.length - 1
+                        ? "1px solid #f1f5f9"
+                        : "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "0.375rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 28,
+                          height: 28,
+                          background: "#eef2ff",
+                          borderRadius: 7,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Music size={14} style={{ color: "#4f46e5" }} />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          color: "#0f172a",
+                        }}
+                      >
+                        {cat.name}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.125rem",
+                        padding: "0.1875rem 0.5rem",
+                        borderRadius: 99,
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        background: isUp ? "#dcfce7" : "#fee2e2",
+                        color: isUp ? "#15803d" : "#b91c1c",
+                      }}
+                    >
+                      {isUp ? (
+                        <ArrowUpRight size={12} />
+                      ) : (
+                        <ArrowDownRight size={12} />
+                      )}
+                      {Math.abs(cat.trend)}%
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "0.8125rem",
+                      color: "#94a3b8",
+                      margin: 0,
+                    }}
+                  >
+                    {cat.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Orders */}
+      <div className="card" style={{ overflow: "hidden" }}>
+        <div
+          className="card-header"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <h3
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+              }}
+            >
+              Recent Orders
+            </h3>
+            <p
+              style={{
+                fontSize: "0.8125rem",
+                color: "#94a3b8",
+                margin: "0.125rem 0 0",
+              }}
+            >
+              Latest customer transactions
+            </p>
+          </div>
+          <a
+            href="/orders"
+            style={{
+              fontSize: "0.875rem",
+              color: "#4f46e5",
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            View All →
+          </a>
+        </div>
+        <div className="table-wrapper">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Product</th>
+                <th style={{ textAlign: "center" }}>Qty</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentOrders.map((order) => {
+                const s = statusStyle[order.status.toLowerCase()] || {
+                  bg: "#f1f5f9",
+                  color: "#475569",
+                };
+                return (
+                  <tr key={order.id}>
+                    <td>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          color: "#0f172a",
+                          fontFamily: "monospace",
+                          fontSize: "0.8125rem",
+                        }}
+                      >
+                        {order.id}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ color: "#374151" }}>{order.product}</span>
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <span style={{ color: "#64748b" }}>{order.qty}</span>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          ...s,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "0.1875rem 0.625rem",
+                          borderRadius: 99,
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <span style={{ fontWeight: 700, color: "#0f172a" }}>
+                        {formatINR(order.amount)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
