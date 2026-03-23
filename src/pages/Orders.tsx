@@ -73,7 +73,9 @@ const mapUiStatusToBackend = (status: OrderStatus): BackendOrderStatus => {
 const mapApiOrderToUi = (order: ApiOrder): Order => {
   const firstName = order.customer?.firstName || "";
   const lastName = order.customer?.lastName || "";
-  const customer = lastName ? `${firstName} ${lastName[0]}.` : firstName || "Customer";
+  const customer = lastName
+    ? `${firstName} ${lastName[0]}.`
+    : firstName || "Customer";
   const customerInitials =
     (firstName?.[0] || "").toUpperCase() + (lastName?.[0] || "").toUpperCase();
 
@@ -230,385 +232,786 @@ export default function Orders() {
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "1.5rem",
-        position: "relative",
+        minHeight: "100vh",
+        background:
+          "linear-gradient(to bottom right, #f8fafc, #ffffff, #f8fafc)",
+        paddingLeft: "1rem",
+        paddingRight: "1rem",
+        paddingTop: "2rem",
+        paddingBottom: "2rem",
       }}
     >
-      {/* Header */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .fadeIn { animation: fadeIn 0.3s ease; }
+        .slideInRight { animation: slideInRight 0.3s ease; }
+        .slideInUp { animation: slideInUp 0.3s ease; }
+        .spin { animation: spin 1s linear infinite; }
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        input:focus, select:focus {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+          border-color: #4f46e5;
+        }
+        @media (max-width: 768px) {
+          body { font-size: 14px; }
+        }
+      `}</style>
+
       <div
         style={{
+          maxWidth: "1400px",
+          marginLeft: "auto",
+          marginRight: "auto",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: "0.75rem",
+          flexDirection: "column",
+          gap: "2rem",
+          position: "relative",
         }}
       >
-        <div>
-          <h1
+        {/* Header Section */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "1rem",
+          }}
+        >
+          <div>
+            <h1
+              style={{
+                fontSize: "clamp(1.75rem, 5vw, 2rem)",
+                fontWeight: 800,
+                color: "#0f172a",
+                margin: 0,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Orders
+            </h1>
+            <p
+              style={{
+                color: "#64748b",
+                margin: "0.5rem 0 0 0",
+                fontSize: "clamp(0.875rem, 2vw, 0.9375rem)",
+                fontWeight: 400,
+              }}
+            >
+              Manage and track all customer orders
+            </p>
+          </div>
+          <button
             style={{
-              fontSize: "1.625rem",
-              fontWeight: 800,
-              color: "#0f172a",
-              letterSpacing: "-0.025em",
-              marginBottom: "0.25rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              paddingLeft: "1rem",
+              paddingRight: "1rem",
+              paddingTop: "0.625rem",
+              paddingBottom: "0.625rem",
+              background: "#e4e4e7",
+              color: "#52525b",
+              fontWeight: 500,
+              borderRadius: "0.5rem",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              fontSize: "0.875rem",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "#d4d4d8";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "#e4e4e7";
             }}
           >
-            Orders
-          </h1>
-          <p style={{ color: "#64748b", margin: 0, fontSize: "0.9375rem" }}>
-            Track and manage customer orders
-          </p>
+            <Download size={16} />
+            Export
+          </button>
         </div>
-        <button className="btn btn-secondary" style={{ gap: "0.5rem" }}>
-          <Download size={16} />
-          Export
-        </button>
-      </div>
 
-      {/* Stats */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: "0.75rem",
-        }}
-      >
-        {stats.map((s) => {
-          const Icon = s.icon;
-          return (
+        {/* Stats Grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "1rem",
+          }}
+        >
+          {stats.map((s) => {
+            const Icon = s.icon;
+            return (
+              <div
+                key={s.label}
+                style={{
+                  padding: "clamp(1rem, 4vw, 1.5rem)",
+                  background: "#ffffff",
+                  border: "1px solid #f0f4f8",
+                  borderRadius: "10px",
+                  transition: "all 0.3s ease",
+                  cursor: "default",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = "#e0e7ff";
+                  el.style.boxShadow = "0 4px 12px rgba(79, 70, 229, 0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.borderColor = "#f0f4f8";
+                  el.style.boxShadow = "none";
+                }}
+              >
+                <div style={{ marginBottom: "1rem" }}>
+                  <p
+                    style={{
+                      fontSize: "0.65rem",
+                      color: "#94a3b8",
+                      margin: 0,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {s.label}
+                  </p>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-end",
+                    gap: "1rem",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "clamp(1.5rem, 5vw, 2rem)",
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      margin: 0,
+                    }}
+                  >
+                    {s.value}
+                  </p>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: "8px",
+                      background: s.bg,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: 0.9,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon size={20} style={{ color: s.color }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Table Card */}
+        <div
+          style={{
+            overflow: "hidden",
+            border: "1px solid #f0f4f8",
+            borderRadius: "10px",
+            background: "#ffffff",
+            transition: "all 0.3s ease",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+          }}
+        >
+          {/* Filter Bar */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "1rem",
+              borderBottom: "1px solid #f0f4f8",
+              padding: "clamp(1rem, 4vw, 1.5rem)",
+            }}
+          >
             <div
-              key={s.label}
-              className="card"
               style={{
-                padding: "1.375rem",
+                position: "relative",
+                flex: 1,
+                minWidth: "220px",
+                maxWidth: "360px",
+              }}
+            >
+              <Search
+                size={16}
+                style={{
+                  position: "absolute",
+                  left: "1rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#cbd5e1",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search by ID, customer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  paddingLeft: "2.5rem",
+                  paddingRight: "1rem",
+                  paddingTop: "0.625rem",
+                  paddingBottom: "0.625rem",
+                  background: "#f8fafc",
+                  border: "1px solid #e0e7ff",
+                  borderRadius: "8px",
+                  fontSize: "0.9375rem",
+                  boxSizing: "border-box",
+                  transition: "all 0.2s ease",
+                }}
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                width: "auto",
+                minWidth: "160px",
+                paddingLeft: "1rem",
+                paddingRight: "1rem",
+                paddingTop: "0.625rem",
+                paddingBottom: "0.625rem",
+                background: "#f8fafc",
+                border: "1px solid #e0e7ff",
+                borderRadius: "8px",
+                fontSize: "0.9375rem",
+                boxSizing: "border-box",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <option value="">All Status</option>
+              {(
+                [
+                  "Approved",
+                  "Pending",
+                  "Processing",
+                  "Rejected",
+                ] as OrderStatus[]
+              ).map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            {(searchTerm || statusFilter) && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("");
+                }}
+                style={{
+                  paddingLeft: "0.75rem",
+                  paddingRight: "0.75rem",
+                  paddingTop: "0.5rem",
+                  paddingBottom: "0.5rem",
+                  background: "transparent",
+                  color: "#64748b",
+                  border: "1px solid #e0e7ff",
+                  borderRadius: "0.5rem",
+                  cursor: "pointer",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "#f1f5f9";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "transparent";
+                }}
+              >
+                Clear
+              </button>
+            )}
+            <p
+              style={{
+                fontSize: "0.8125rem",
+                color: "#94a3b8",
+                marginLeft: "auto",
+                fontWeight: 500,
+                margin: 0,
+              }}
+            >
+              {filtered.length} order{filtered.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+
+          {/* Table Content */}
+          {loading ? (
+            <div
+              style={{
+                padding: "clamp(2rem, 10vw, 4rem)",
+                textAlign: "center",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
-                gap: "0.75rem",
+                gap: "1rem",
               }}
             >
               <div
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 9,
-                  background: s.bg,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  width: "3rem",
+                  height: "3rem",
+                  border: "4px solid #e5e7eb",
+                  borderTop: "4px solid #4f46e5",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite",
+                }}
+              />
+              <h3
+                style={{
+                  fontSize: "clamp(0.875rem, 2vw, 1.0625rem)",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  margin: 0,
                 }}
               >
-                <Icon size={16} style={{ color: s.color }} />
-              </div>
-              <div>
-                <p
-                  style={{
-                    fontSize: "0.6875rem",
-                    color: "#94a3b8",
-                    margin: 0,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.label}
-                </p>
-                <p
-                  style={{
-                    fontSize: "1.25rem",
-                    fontWeight: 800,
-                    color: "#0f172a",
-                    margin: 0,
-                  }}
-                >
-                  {s.value}
-                </p>
-              </div>
+                Loading orders...
+              </h3>
+              <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.9375rem" }}>
+                Please wait while fetching your orders.
+              </p>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Table Card */}
-      <div className="card" style={{ overflow: "hidden" }}>
-        {/* Filter Bar */}
-        <div
-          className="card-header"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-          }}
-        >
-          <div
-            style={{
-              position: "relative",
-              flex: 1,
-              minWidth: 200,
-              maxWidth: 340,
-            }}
-          >
-            <Search
-              size={15}
+          ) : error ? (
+            <div
               style={{
-                position: "absolute",
-                left: "0.75rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#94a3b8",
-              }}
-            />
-            <input
-              type="text"
-              className="input"
-              placeholder="Search by order ID, customer..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: "2.25rem", height: 38 }}
-            />
-          </div>
-          <select
-            className="select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ width: "auto", minWidth: 150, height: 38 }}
-          >
-            <option value="">All Status</option>
-            {(
-              ["Approved", "Pending", "Processing", "Rejected"] as OrderStatus[]
-            ).map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          {(searchTerm || statusFilter) && (
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("");
+                padding: "clamp(2rem, 10vw, 4rem)",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "1rem",
               }}
             >
-              Clear
-            </button>
-          )}
-          <p
-            style={{
-              fontSize: "0.8125rem",
-              color: "#94a3b8",
-              marginLeft: "auto",
-            }}
-          >
-            {filtered.length} order{filtered.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-
-        {/* Table */}
-        {loading ? (
-          <div className="empty-state">
-            <ShoppingBag size={40} style={{ color: "#cbd5e1" }} />
-            <h3
+              <XCircle size={48} style={{ color: "#fecaca" }} />
+              <h3
+                style={{
+                  fontSize: "clamp(0.875rem, 2vw, 1.0625rem)",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  margin: 0,
+                }}
+              >
+                Unable to load orders
+              </h3>
+              <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.9375rem" }}>
+                {error}
+              </p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div
               style={{
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#0f172a",
-                margin: 0,
+                padding: "clamp(2rem, 10vw, 4rem)",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "1rem",
               }}
             >
-              Loading orders...
-            </h3>
-            <p style={{ color: "#94a3b8", margin: 0 }}>
-              Please wait while we fetch recent activity.
-            </p>
-          </div>
-        ) : error ? (
-          <div className="empty-state">
-            <XCircle size={40} style={{ color: "#ef4444" }} />
-            <h3
-              style={{
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#0f172a",
-                margin: 0,
-              }}
-            >
-              Unable to load orders
-            </h3>
-            <p style={{ color: "#94a3b8", margin: 0 }}>
-              {error} Try refreshing the page.
-            </p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <ShoppingBag size={40} style={{ color: "#cbd5e1" }} />
-            <h3
-              style={{
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#0f172a",
-                margin: 0,
-              }}
-            >
-              No orders found
-            </h3>
-            <p style={{ color: "#94a3b8", margin: 0 }}>
-              Try adjusting your search or filters
-            </p>
-          </div>
-        ) : (
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Order ID</th>
-                  <th>Customer</th>
-                  <th>Product</th>
-                  <th>Date</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((order) => {
-                  const sc = statusConfig[order.status];
-                  return (
-                    <tr key={order.id}>
-                      <td>
-                        <span
+              <ShoppingBag size={48} style={{ color: "#e0e7ff" }} />
+              <h3
+                style={{
+                  fontSize: "clamp(0.875rem, 2vw, 1.0625rem)",
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  margin: 0,
+                }}
+              >
+                No orders found
+              </h3>
+              <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.9375rem" }}>
+                Try adjusting your search or filters
+              </p>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr
+                    style={{
+                      borderBottom: "1px solid #f0f4f8",
+                      background: "#fafbfc",
+                    }}
+                  >
+                    <th
+                      style={{
+                        padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                        textAlign: "left",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Order ID
+                    </th>
+                    <th
+                      style={{
+                        padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                        textAlign: "left",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Customer
+                    </th>
+                    <th
+                      style={{
+                        padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                        textAlign: "left",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Product
+                    </th>
+                    <th
+                      style={{
+                        padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                        textAlign: "left",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Date
+                    </th>
+                    <th
+                      style={{
+                        padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                        textAlign: "left",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Total
+                    </th>
+                    <th
+                      style={{
+                        padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                        textAlign: "left",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Status
+                    </th>
+                    <th
+                      style={{
+                        padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                        textAlign: "right",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#64748b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((order, index) => {
+                    const sc = statusConfig[order.status];
+                    return (
+                      <tr
+                        key={order.id}
+                        style={{
+                          borderBottom: "1px solid #f0f4f8",
+                          transition: "background-color 0.2s ease",
+                          background: index % 2 === 0 ? "#ffffff" : "#fafbfc",
+                        }}
+                        onMouseEnter={(e) => {
+                          (
+                            e.currentTarget as HTMLElement
+                          ).style.backgroundColor = "#f8fafc";
+                        }}
+                        onMouseLeave={(e) => {
+                          (
+                            e.currentTarget as HTMLElement
+                          ).style.backgroundColor =
+                            index % 2 === 0 ? "#ffffff" : "#fafbfc";
+                        }}
+                      >
+                        <td
                           style={{
-                            fontWeight: 700,
-                            color: "#0f172a",
-                            fontFamily: "monospace",
+                            padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
                             fontSize: "0.8125rem",
                           }}
                         >
-                          {order.id}
-                        </span>
-                      </td>
-                      <td>
-                        <div
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              color: "#0f172a",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            #{order.id.slice(-6)}
+                          </span>
+                        </td>
+                        <td
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.625rem",
+                            padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
                           }}
                         >
                           <div
                             style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: "50%",
-                              background: "#eef2ff",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
+                              gap: "0.75rem",
+                              minWidth: 0,
                             }}
                           >
-                            <span
+                            <div
                               style={{
-                                fontSize: "0.6875rem",
+                                width: 36,
+                                height: 36,
+                                borderRadius: "7px",
+                                background: "#eef2ff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                fontSize: "0.75rem",
                                 fontWeight: 700,
                                 color: "#4f46e5",
                               }}
                             >
                               {order.customerInitials}
-                            </span>
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <p
+                                style={{
+                                  fontWeight: 600,
+                                  color: "#0f172a",
+                                  margin: 0,
+                                  fontSize: "0.875rem",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {order.customer}
+                              </p>
+                              <p
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "#94a3b8",
+                                  margin: "0.25rem 0 0 0",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {order.email}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p
-                              style={{
-                                fontWeight: 600,
-                                color: "#0f172a",
-                                margin: 0,
-                                fontSize: "0.875rem",
-                              }}
-                            >
-                              {order.customer}
-                            </p>
-                            <p
-                              style={{
-                                fontSize: "0.75rem",
-                                color: "#94a3b8",
-                                margin: 0,
-                              }}
-                            >
-                              {order.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span
+                        </td>
+                        <td
                           style={{
-                            color: "#64748b",
+                            padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
                             fontSize: "0.875rem",
-                            maxWidth: 200,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            display: "block",
+                            color: "#64748b",
                           }}
                         >
-                          {order.product}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          style={{ color: "#64748b", fontSize: "0.875rem" }}
+                          <span
+                            style={{
+                              maxWidth: "200px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              display: "block",
+                            }}
+                          >
+                            {order.product}
+                          </span>
+                        </td>
+                        <td
+                          style={{
+                            padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                            fontSize: "0.9375rem",
+                            color: "#64748b",
+                            fontWeight: 500,
+                          }}
                         >
                           {order.date}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: 700, color: "#0f172a" }}>
-                          {formatINR(order.total)}
-                        </span>
-                      </td>
-                      <td>
-                        <span
+                        </td>
+                        <td
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            padding: "0.25rem 0.625rem",
-                            borderRadius: 99,
-                            fontSize: "0.75rem",
-                            fontWeight: 500,
-                            background: sc.bg,
-                            color: sc.color,
+                            padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                            fontSize: "0.875rem",
                           }}
                         >
-                          {sc.label}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <button
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setNewStatus(order.status);
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              color: "#0f172a",
+                            }}
+                          >
+                            {formatINR(order.total)}
+                          </span>
+                        </td>
+                        <td
+                          style={{
+                            padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
                           }}
-                          className="btn btn-ghost btn-sm"
-                          style={{ gap: "0.25rem", fontSize: "0.8125rem" }}
                         >
-                          View <ChevronRight size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              padding: "0.375rem 0.75rem",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              background: sc.bg,
+                              color: sc.color,
+                              letterSpacing: "0.02em",
+                            }}
+                          >
+                            {sc.label}
+                          </span>
+                        </td>
+                        <td
+                          style={{
+                            padding: "clamp(0.75rem, 3vw, 1rem) 1.5rem",
+                            textAlign: "right",
+                          }}
+                        >
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setNewStatus(order.status);
+                            }}
+                            style={{
+                              paddingLeft: "0.75rem",
+                              paddingRight: "0.75rem",
+                              paddingTop: "0.5rem",
+                              paddingBottom: "0.5rem",
+                              background: "transparent",
+                              color: "#64748b",
+                              border: "none",
+                              borderRadius: "0.5rem",
+                              cursor: "pointer",
+                              gap: "0.25rem",
+                              fontSize: "0.8125rem",
+                              fontWeight: 500,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "flex-end",
+                              transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.backgroundColor = "#f1f5f9";
+                            }}
+                            onMouseLeave={(e) => {
+                              (
+                                e.currentTarget as HTMLElement
+                              ).style.backgroundColor = "transparent";
+                            }}
+                          >
+                            View
+                            <ChevronRight size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Order Detail Side Panel */}
+      {/* Order Detail Side Panel - Fully Responsive */}
       {selectedOrder && (
         <>
           {/* Panel overlay */}
@@ -616,17 +1019,47 @@ export default function Orders() {
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(15,23,42,0.2)",
+              background: "rgba(15, 23, 42, 0.3)",
               zIndex: 998,
+              backdropFilter: "blur(4px)",
+              animation: "fadeIn 0.3s ease",
+              WebkitBackdropFilter: "blur(4px)",
             }}
             onClick={() => setSelectedOrder(null)}
           />
-          <div className="side-panel">
-            <div className="side-panel-header">
+          <div
+            style={{
+              position: "fixed",
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: "100%",
+              maxWidth: "480px",
+              zIndex: 999,
+              background: "#ffffff",
+              borderLeft: "1px solid #f0f4f8",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              animation: "slideInRight 0.3s ease",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                padding: "clamp(1rem, 4vw, 1.75rem)",
+                borderBottom: "1px solid #f0f4f8",
+                background: "#ffffff",
+                zIndex: 10,
+              }}
+            >
               <div>
                 <h3
                   style={{
-                    fontSize: "1rem",
+                    fontSize: "clamp(1rem, 3vw, 1.125rem)",
                     fontWeight: 700,
                     color: "#0f172a",
                     margin: 0,
@@ -637,12 +1070,13 @@ export default function Orders() {
                 <p
                   style={{
                     fontSize: "0.8125rem",
-                    color: "#64748b",
-                    margin: "0.125rem 0 0",
+                    color: "#94a3b8",
+                    margin: "0.5rem 0 0 0",
                     fontFamily: "monospace",
+                    fontWeight: 500,
                   }}
                 >
-                  {selectedOrder.id}
+                  #{selectedOrder.id.slice(-6)}
                 </p>
               </div>
               <button
@@ -652,16 +1086,26 @@ export default function Orders() {
                   border: "none",
                   cursor: "pointer",
                   color: "#94a3b8",
-                  padding: "0.375rem",
-                  borderRadius: 6,
+                  padding: "0.5rem",
+                  borderRadius: "6px",
                   display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s ease",
+                  width: 32,
+                  height: 32,
+                  minWidth: 32,
+                  minHeight: 32,
+                  flexShrink: 0,
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "#f1f5f9";
+                  (e.currentTarget as HTMLElement).style.backgroundColor =
+                    "#f1f5f9";
                   (e.currentTarget as HTMLElement).style.color = "#374151";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "none";
+                  (e.currentTarget as HTMLElement).style.backgroundColor =
+                    "transparent";
                   (e.currentTarget as HTMLElement).style.color = "#94a3b8";
                 }}
               >
@@ -669,89 +1113,94 @@ export default function Orders() {
               </button>
             </div>
 
+            {/* Body - Scrollable */}
             <div
-              className="side-panel-body"
               style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "1.25rem",
+                flex: 1,
+                overflowY: "auto",
+                overflowX: "hidden",
               }}
             >
-              {/* Status Badge */}
-              <div>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "0.375rem 0.875rem",
-                    borderRadius: 99,
-                    fontSize: "0.8125rem",
-                    fontWeight: 600,
-                    background: statusConfig[selectedOrder.status].bg,
-                    color: statusConfig[selectedOrder.status].color,
-                  }}
-                >
-                  {selectedOrder.status}
-                </span>
-              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "clamp(1rem, 4vw, 1.75rem)",
+                  padding: "clamp(1rem, 4vw, 1.75rem)",
+                }}
+              >
+                {/* Status Badge */}
+                <div>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "6px",
+                      fontSize: "0.8125rem",
+                      fontWeight: 600,
+                      background: statusConfig[selectedOrder.status].bg,
+                      color: statusConfig[selectedOrder.status].color,
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    {selectedOrder.status}
+                  </span>
+                </div>
 
-              {/* Customer Info */}
-              <div>
-                <p
-                  style={{
-                    fontSize: "0.6875rem",
-                    fontWeight: 600,
-                    color: "#94a3b8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    marginBottom: "0.625rem",
-                  }}
-                >
-                  Customer Information
-                </p>
+                {/* Customer Info */}
                 <div
                   style={{
-                    background: "#f8fafc",
-                    borderRadius: 10,
-                    padding: "1.5rem",
+                    paddingBottom: "clamp(1rem, 3vw, 1.25rem)",
+                    borderBottom: "1px solid #f0f4f8",
                   }}
                 >
+                  <p
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      margin: "0 0 1rem 0",
+                    }}
+                  >
+                    Customer
+                  </p>
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.75rem",
-                      marginBottom: "0.75rem",
+                      gap: "1rem",
                     }}
                   >
                     <div
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: "50%",
+                        width: 44,
+                        height: 44,
+                        borderRadius: "8px",
                         background: "#eef2ff",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        fontSize: "0.875rem",
+                        fontWeight: 700,
+                        color: "#4f46e5",
+                        flexShrink: 0,
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: "0.875rem",
-                          fontWeight: 700,
-                          color: "#4f46e5",
-                        }}
-                      >
-                        {selectedOrder.customerInitials}
-                      </span>
+                      {selectedOrder.customerInitials}
                     </div>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <p
                         style={{
                           fontWeight: 700,
                           color: "#0f172a",
                           margin: 0,
                           fontSize: "0.9375rem",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {selectedOrder.customer}
@@ -760,103 +1209,64 @@ export default function Orders() {
                         style={{
                           fontSize: "0.8125rem",
                           color: "#64748b",
-                          margin: 0,
+                          margin: "0.375rem 0 0 0",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {selectedOrder.email}
                       </p>
                     </div>
                   </div>
-                  <div className="divider" style={{ margin: "0.75rem 0" }} />
-                  <p
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      color: "#94a3b8",
-                      marginBottom: "0.25rem",
-                    }}
-                  >
-                    Shipping Address
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "0.875rem",
-                      color: "#374151",
-                      margin: 0,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {selectedOrder.address}
-                  </p>
-                  <div className="divider" style={{ margin: "0.75rem 0" }} />
-                  <p
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      color: "#94a3b8",
-                      marginBottom: "0.25rem",
-                    }}
-                  >
-                    Payment Method
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "0.875rem",
-                      color: "#374151",
-                      margin: 0,
-                    }}
-                  >
-                    {selectedOrder.paymentMethod}
-                  </p>
                 </div>
-              </div>
 
-              {/* Items Ordered */}
-              <div>
-                <p
-                  style={{
-                    fontSize: "0.6875rem",
-                    fontWeight: 600,
-                    color: "#94a3b8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    marginBottom: "0.625rem",
-                  }}
-                >
-                  Items Ordered
-                </p>
+                {/* Items Ordered */}
                 <div
                   style={{
-                    background: "#f8fafc",
-                    borderRadius: 10,
-                    overflow: "hidden",
+                    paddingBottom: "clamp(1rem, 3vw, 1.25rem)",
+                    borderBottom: "1px solid #f0f4f8",
                   }}
                 >
-                  {selectedOrder.items.map((item, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        padding: "0.875rem 1rem",
-                        borderBottom:
-                          i < selectedOrder.items.length - 1
-                            ? "1px solid #e2e8f0"
-                            : "none",
-                      }}
-                    >
+                  <p
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      margin: "0 0 1rem 0",
+                    }}
+                  >
+                    Items ({selectedOrder.items.length})
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1rem",
+                    }}
+                  >
+                    {selectedOrder.items.map((item, i) => (
                       <div
+                        key={i}
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "flex-start",
+                          gap: "1rem",
                         }}
                       >
-                        <div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <p
                             style={{
-                              fontSize: "0.875rem",
-                              fontWeight: 600,
+                              fontSize: "0.9375rem",
+                              fontWeight: 500,
                               color: "#0f172a",
                               margin: 0,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
                             }}
                           >
                             {item.name}
@@ -865,156 +1275,290 @@ export default function Orders() {
                             style={{
                               fontSize: "0.8125rem",
                               color: "#94a3b8",
-                              margin: "0.125rem 0 0",
+                              margin: "0.375rem 0 0 0",
                             }}
                           >
-                            Qty: {item.qty} × {formatINR(item.price)}
+                            {item.qty} {item.qty === 1 ? "unit" : "units"} @{" "}
+                            {formatINR(item.price)}
                           </p>
                         </div>
                         <span
                           style={{
-                            fontSize: "0.875rem",
+                            fontSize: "0.9375rem",
                             fontWeight: 700,
                             color: "#0f172a",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                           }}
                         >
                           {formatINR(item.qty * item.price)}
                         </span>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Order Total Breakdown */}
-              <div>
-                <p
-                  style={{
-                    fontSize: "0.6875rem",
-                    fontWeight: 600,
-                    color: "#94a3b8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    marginBottom: "0.625rem",
-                  }}
-                >
-                  Order Total
-                </p>
+                {/* Order Total */}
                 <div
                   style={{
-                    background: "#f8fafc",
-                    borderRadius: 10,
-                    padding: "1.5rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.625rem",
+                    paddingBottom: "clamp(1rem, 3vw, 1.25rem)",
+                    borderBottom: "1px solid #f0f4f8",
                   }}
                 >
-                  {[
-                    { label: "Subtotal", value: selectedOrder.total },
-                    { label: "Shipping", value: 9.99 },
-                    {
-                      label: "Tax (8%)",
-                      value: Math.round(selectedOrder.total * 0.08),
-                    },
-                  ].map((row) => (
+                  <p
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      margin: "0 0 1rem 0",
+                    }}
+                  >
+                    Order Summary
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.75rem",
+                    }}
+                  >
                     <div
-                      key={row.label}
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
                       }}
                     >
-                      <span style={{ fontSize: "0.875rem", color: "#64748b" }}>
-                        {row.label}
+                      <span
+                        style={{
+                          fontSize: "0.9375rem",
+                          color: "#64748b",
+                        }}
+                      >
+                        Subtotal
                       </span>
-                      <span style={{ fontSize: "0.875rem", color: "#374151" }}>
-                        {formatINR(row.value)}
+                      <span
+                        style={{
+                          fontSize: "0.9375rem",
+                          fontWeight: 600,
+                          color: "#374151",
+                        }}
+                      >
+                        {formatINR(selectedOrder.total)}
                       </span>
                     </div>
-                  ))}
-                  <div className="divider" style={{ margin: "0.25rem 0" }} />
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <span
+                    <div
                       style={{
-                        fontSize: "0.9375rem",
-                        fontWeight: 700,
-                        color: "#0f172a",
+                        display: "flex",
+                        justifyContent: "space-between",
                       }}
                     >
-                      Total
-                    </span>
-                    <span
+                      <span
+                        style={{
+                          fontSize: "0.9375rem",
+                          color: "#64748b",
+                        }}
+                      >
+                        Shipping & Tax
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.9375rem",
+                          fontWeight: 600,
+                          color: "#374151",
+                        }}
+                      >
+                        {formatINR(
+                          9.99 + Math.round(selectedOrder.total * 0.08),
+                        )}
+                      </span>
+                    </div>
+                    <div
                       style={{
-                        fontSize: "0.9375rem",
-                        fontWeight: 800,
-                        color: "#4f46e5",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        paddingTop: "0.75rem",
+                        borderTop: "1px solid #f0f4f8",
                       }}
                     >
-                      {formatINR(
-                        selectedOrder.total +
-                          9.99 +
-                          Math.round(selectedOrder.total * 0.08)
-                      )}
-                    </span>
+                      <span
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: 700,
+                          color: "#0f172a",
+                        }}
+                      >
+                        Total
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: 700,
+                          color: "#4f46e5",
+                        }}
+                      >
+                        {formatINR(
+                          selectedOrder.total +
+                            9.99 +
+                            Math.round(selectedOrder.total * 0.08),
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Update Status */}
-              <div>
-                <p
+                {/* Shipping Address */}
+                <div
                   style={{
-                    fontSize: "0.6875rem",
-                    fontWeight: 600,
-                    color: "#94a3b8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    marginBottom: "0.625rem",
+                    paddingBottom: "clamp(1rem, 3vw, 1.25rem)",
+                    borderBottom: "1px solid #f0f4f8",
                   }}
                 >
-                  Update Status
-                </p>
-                <select
-                  className="select"
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
-                >
-                  {(
-                    [
-                      "Approved",
-                      "Pending",
-                      "Processing",
-                      "Rejected",
-                    ] as OrderStatus[]
-                  ).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  <p
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      margin: "0 0 1rem 0",
+                    }}
+                  >
+                    Shipping Address
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "0.9375rem",
+                      color: "#374151",
+                      margin: 0,
+                      lineHeight: 1.6,
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {selectedOrder.address}
+                  </p>
+                </div>
+
+                {/* Update Status */}
+                <div>
+                  <p
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      margin: "0 0 1rem 0",
+                    }}
+                  >
+                    Update Status
+                  </p>
+                  <select
+                    value={newStatus}
+                    onChange={(e) =>
+                      setNewStatus(e.target.value as OrderStatus)
+                    }
+                    style={{
+                      width: "100%",
+                      paddingLeft: "1rem",
+                      paddingRight: "1rem",
+                      paddingTop: "0.625rem",
+                      paddingBottom: "0.625rem",
+                      background: "#f8fafc",
+                      border: "1px solid #e0e7ff",
+                      borderRadius: "8px",
+                      fontSize: "0.9375rem",
+                      boxSizing: "border-box",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {(
+                      [
+                        "Approved",
+                        "Pending",
+                        "Processing",
+                        "Rejected",
+                      ] as OrderStatus[]
+                    ).map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
+            {/* Footer */}
             <div
-              className="side-panel-footer"
-              style={{ display: "flex", gap: "0.75rem" }}
+              style={{
+                display: "flex",
+                gap: "1rem",
+                padding: "clamp(1rem, 4vw, 1.75rem)",
+                borderTop: "1px solid #f0f4f8",
+                background: "#fafbfc",
+                flexWrap: "wrap",
+              }}
             >
               <button
-                className="btn btn-secondary"
                 onClick={() => setSelectedOrder(null)}
-                style={{ flex: 1 }}
+                style={{
+                  flex: 1,
+                  minWidth: "120px",
+                  paddingLeft: "1rem",
+                  paddingRight: "1rem",
+                  paddingTop: "0.625rem",
+                  paddingBottom: "0.625rem",
+                  background: "#e4e4e7",
+                  color: "#52525b",
+                  fontWeight: 500,
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  fontSize: "0.875rem",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "#d4d4d8";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "#e4e4e7";
+                }}
               >
                 Close
               </button>
               <button
-                className="btn btn-primary"
                 onClick={handleUpdateStatus}
-                style={{ flex: 1 }}
+                style={{
+                  flex: 1,
+                  minWidth: "120px",
+                  paddingLeft: "1rem",
+                  paddingRight: "1rem",
+                  paddingTop: "0.625rem",
+                  paddingBottom: "0.625rem",
+                  background: "#4f46e5",
+                  color: "#ffffff",
+                  fontWeight: 500,
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  fontSize: "0.875rem",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "#4338ca";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "#4f46e5";
+                }}
               >
-                Update Order
+                Update Status
               </button>
             </div>
           </div>

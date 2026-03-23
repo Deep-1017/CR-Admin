@@ -5,18 +5,12 @@ import {
   BarChart3,
   ShoppingCart,
   Calendar,
-  Users,
 } from "lucide-react";
 import {
   AreaChart,
   Area,
   BarChart,
   Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -150,7 +144,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         background: "#fff",
         border: "1px solid #e2e8f0",
         borderRadius: 8,
-        padding: "1rem 1.25rem",
+        padding: "0.75rem 1rem",
         boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
       }}
     >
@@ -158,8 +152,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         style={{
           fontWeight: 700,
           color: "#0f172a",
-          margin: "0 0 0.5rem",
-          fontSize: "0.875rem",
+          margin: "0 0 0.375rem",
+          fontSize: "0.75rem",
         }}
       >
         {label}
@@ -168,9 +162,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <p
           key={p.name}
           style={{
-            fontSize: "0.8125rem",
+            fontSize: "0.75rem",
             color: p.color,
-            margin: "0.125rem 0",
+            margin: "0.0625rem 0",
           }}
         >
           {p.name}: <strong>{formatINR(p.value)}</strong>
@@ -185,434 +179,316 @@ export default function Analytics() {
   const [dateRange, setDateRange] = useState("Last 30 Days");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "2.25rem" }}>
-      {/* Header */}
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(to bottom right, #f8fafc, #ffffff, #f8fafc)",
+        paddingLeft: "1rem",
+        paddingRight: "1rem",
+        paddingTop: "2rem",
+        paddingBottom: "2rem",
+      }}
+    >
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .fadeIn { animation: fadeIn 0.3s ease; }
+        .slideInUp { animation: slideInUp 0.3s ease; }
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        select:focus {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+          border-color: #4f46e5;
+        }
+        @media (max-width: 768px) {
+          body { font-size: 14px; }
+        }
+      `}</style>
+
       <div
         style={{
+          maxWidth: "1400px",
+          marginLeft: "auto",
+          marginRight: "auto",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: "0.75rem",
+          flexDirection: "column",
+          gap: "2rem",
         }}
       >
-        <div>
-          <h1
-            style={{
-              fontSize: "1.625rem",
-              fontWeight: 800,
-              color: "#0f172a",
-              letterSpacing: "-0.025em",
-              marginBottom: "0.25rem",
-            }}
-          >
-            Analytics
-          </h1>
-          <p style={{ color: "#64748b", margin: 0, fontSize: "0.9375rem" }}>
-            Deep-dive into your store performance
-          </p>
-        </div>
+        {/* Header Section */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.5rem 0.875rem",
-            background: "#fff",
-            border: "1px solid #e2e8f0",
-            borderRadius: 8,
-            fontSize: "0.875rem",
-            color: "#64748b",
-            cursor: "pointer",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "1rem",
+            flexWrap: "wrap",
           }}
         >
-          <Calendar size={15} />
-          <select
+          <div>
+            <h1
+              style={{
+                fontSize: "clamp(1.75rem, 5vw, 2rem)",
+                fontWeight: 800,
+                color: "#0f172a",
+                margin: 0,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Analytics
+            </h1>
+            <p
+              style={{
+                color: "#64748b",
+                margin: "0.5rem 0 0 0",
+                fontSize: "clamp(0.875rem, 2vw, 0.9375rem)",
+              }}
+            >
+              Real-time insights into your store
+            </p>
+          </div>
+          <div
             style={{
-              border: "none",
-              background: "transparent",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              paddingLeft: "1rem",
+              paddingRight: "0.5rem",
+              paddingTop: "0.5rem",
+              paddingBottom: "0.5rem",
+              background: "#f1f5f9",
+              borderRadius: 8,
               fontSize: "0.875rem",
               color: "#374151",
-              cursor: "pointer",
-              outline: "none",
-              fontFamily: "inherit",
-            }}
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-          >
-            <option>Last 7 Days</option>
-            <option>Last 30 Days</option>
-            <option>Last 90 Days</option>
-            <option>This Year</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.25rem",
-          background: "#f1f5f9",
-          borderRadius: 10,
-          padding: "0.25rem",
-          width: "fit-content",
-        }}
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: "0.4375rem 1rem",
-              borderRadius: 7,
-              border: "none",
-              cursor: "pointer",
-              fontSize: "0.875rem",
               fontWeight: 500,
-              fontFamily: "inherit",
-              transition: "all 0.15s ease",
-              background: activeTab === tab ? "#fff" : "transparent",
-              color: activeTab === tab ? "#0f172a" : "#64748b",
-              boxShadow:
-                activeTab === tab ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              flexShrink: 0,
+              border: "1px solid #e2e8f0",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "#e2e8f0";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "#f1f5f9";
             }}
           >
-            {tab}
-          </button>
-        ))}
-      </div>
+            <Calendar size={16} strokeWidth={2} style={{ color: "#64748b" }} />
+            <select
+              style={{
+                border: "none",
+                background: "transparent",
+                fontSize: "0.875rem",
+                color: "#374151",
+                cursor: "pointer",
+                outline: "none",
+                fontFamily: "inherit",
+                padding: "0 0.5rem",
+              }}
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+            >
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Last 90 Days</option>
+              <option>This Year</option>
+            </select>
+          </div>
+        </div>
 
-      {/* KPI Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "1rem",
-        }}
-      >
-        {kpis.map((kpi) => {
-          const Icon = kpi.icon;
-          return (
-            <div key={kpi.label} className="stat-card">
+        {/* Tabs */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0",
+            borderBottom: "2px solid #f1f5f9",
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: "0.75rem clamp(0.75rem, 3vw, 1.25rem)",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "clamp(0.8125rem, 2vw, 0.875rem)",
+                fontWeight: 500,
+                fontFamily: "inherit",
+                background: "transparent",
+                color: activeTab === tab ? "#4f46e5" : "#94a3b8",
+                borderBottom: activeTab === tab ? "2px solid #4f46e5" : "none",
+                marginBottom: "-2px",
+                transition: "all 0.15s ease",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* KPI Cards */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(clamp(150px, 100%, 220px), 1fr))",
+            gap: "1rem",
+          }}
+        >
+          {kpis.map((kpi) => {
+            const Icon = kpi.icon;
+            return (
               <div
+                key={kpi.label}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
+                  padding: "clamp(1rem, 4vw, 1.5rem)",
+                  background: "#fff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 12,
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor =
+                    "#d4d4d8";
+                  (e.currentTarget as HTMLElement).style.boxShadow =
+                    "0 4px 12px rgba(0,0,0,0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor =
+                    "#e2e8f0";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
                 }}
               >
                 <div
                   style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: kpi.bg,
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon size={18} style={{ color: kpi.color }} />
-                </div>
-                <span
-                  style={{
-                    padding: "0.2rem 0.5rem",
-                    borderRadius: 99,
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    background: kpi.up ? "#dcfce7" : "#fee2e2",
-                    color: kpi.up ? "#15803d" : "#b91c1c",
-                  }}
-                >
-                  {kpi.change}
-                </span>
-              </div>
-              <div>
-                <p
-                  style={{ fontSize: "0.8125rem", color: "#64748b", margin: 0 }}
-                >
-                  {kpi.label}
-                </p>
-                <p
-                  style={{
-                    fontSize: "1.625rem",
-                    fontWeight: 800,
-                    color: "#0f172a",
-                    margin: "0.25rem 0 0",
-                    letterSpacing: "-0.025em",
-                  }}
-                >
-                  {typeof kpi.value === "number" ? formatINR(kpi.value) : kpi.value}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Charts Row 1 */}
-      <div
-        style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}
-      >
-        {/* Revenue vs Expenses */}
-        <div className="card">
-          <div className="card-header">
-            <h3
-              style={{
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#0f172a",
-                margin: 0,
-              }}
-            >
-              Revenue vs Expenses
-            </h3>
-            <p
-              style={{
-                fontSize: "0.8125rem",
-                color: "#94a3b8",
-                margin: "0.125rem 0 0",
-              }}
-            >
-              Monthly comparison for 2025–2026
-            </p>
-          </div>
-          <div className="card-body">
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={revenueData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient
-                    id="colorExpenses"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 12, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => formatINR(v)}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: "0.8125rem" }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#4f46e5"
-                  strokeWidth={2.5}
-                  fill="url(#colorRevenue)"
-                  name="Revenue"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="expenses"
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                  fill="url(#colorExpenses)"
-                  name="Expenses"
-                  strokeDasharray="4 3"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Sales by Category */}
-        <div className="card">
-          <div className="card-header">
-            <h3
-              style={{
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#0f172a",
-                margin: 0,
-              }}
-            >
-              Sales by Category
-            </h3>
-            <p
-              style={{
-                fontSize: "0.8125rem",
-                color: "#94a3b8",
-                margin: "0.125rem 0 0",
-              }}
-            >
-              Revenue distribution
-            </p>
-          </div>
-          <div className="card-body">
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={52}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => [`${value}%`, ""]} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-                marginTop: "0.5rem",
-              }}
-            >
-              {categoryData.map((cat) => (
-                <div
-                  key={cat.name}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
                     justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: "1rem",
                   }}
                 >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p
+                      style={{
+                        fontSize: "0.65rem",
+                        color: "#94a3b8",
+                        margin: 0,
+                        fontWeight: 500,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      {kpi.label}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "clamp(1.125rem, 3.5vw, 1.375rem)",
+                        fontWeight: 800,
+                        color: "#0f172a",
+                        margin: "0.5rem 0 0",
+                        letterSpacing: "-0.025em",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {typeof kpi.value === "number"
+                        ? formatINR(kpi.value)
+                        : kpi.value}
+                    </p>
+                  </div>
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      flexDirection: "column",
+                      alignItems: "flex-end",
                       gap: "0.5rem",
+                      flexShrink: 0,
                     }}
                   >
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        background: kpi.bg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon size={20} style={{ color: kpi.color }} />
+                    </div>
                     <span
                       style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: cat.color,
-                        flexShrink: 0,
+                        padding: "0.25rem 0.75rem",
+                        borderRadius: 6,
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        background: kpi.up ? "#dcfce7" : "#fee2e2",
+                        color: kpi.up ? "#15803d" : "#b91c1c",
                       }}
-                    />
-                    <span style={{ fontSize: "0.8125rem", color: "#374151" }}>
-                      {cat.name}
+                    >
+                      {kpi.change}
                     </span>
                   </div>
-                  <span
-                    style={{
-                      fontSize: "0.8125rem",
-                      fontWeight: 600,
-                      color: "#0f172a",
-                    }}
-                  >
-                    {cat.value}%
-                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}
-      >
-        {/* Monthly Orders */}
-        <div className="card">
-          <div className="card-header">
-            <h3
-              style={{
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "#0f172a",
-                margin: 0,
-              }}
-            >
-              Monthly Orders
-            </h3>
-            <p
-              style={{
-                fontSize: "0.8125rem",
-                color: "#94a3b8",
-                margin: "0.125rem 0 0",
-              }}
-            >
-              Orders placed vs returned
-            </p>
-          </div>
-          <div className="card-body">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={monthlyOrders} barGap={4}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f1f5f9"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 12, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: "0.8125rem" }}
-                />
-                <Bar
-                  dataKey="orders"
-                  fill="#4f46e5"
-                  radius={[4, 4, 0, 0]}
-                  name="Orders"
-                />
-                <Bar
-                  dataKey="returned"
-                  fill="#f87171"
-                  radius={[4, 4, 0, 0]}
-                  name="Returned"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Top Products */}
-        <div className="card" style={{ overflow: "hidden" }}>
+        {/* Charts Row 1 */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(clamp(280px, 100%, 600px), 1fr))",
+            gap: "1.5rem",
+          }}
+        >
+          {/* Revenue vs Expenses */}
           <div
-            className="card-header"
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: "clamp(1rem, 4vw, 1.5rem)",
+              overflow: "hidden",
             }}
           >
-            <div>
+            <div style={{ marginBottom: "1.25rem" }}>
               <h3
                 style={{
                   fontSize: "1rem",
@@ -621,151 +497,566 @@ export default function Analytics() {
                   margin: 0,
                 }}
               >
-                Top Performing Products
+                Revenue vs Expenses
               </h3>
               <p
                 style={{
                   fontSize: "0.8125rem",
                   color: "#94a3b8",
-                  margin: "0.125rem 0 0",
+                  margin: "0.25rem 0 0",
+                }}
+              >
+                {dateRange} progression
+              </p>
+            </div>
+            <div style={{ width: "100%", height: "100%", minHeight: "220px" }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={revenueData}>
+                  <defs>
+                    <linearGradient
+                      id="colorRevenue"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="#4f46e5"
+                        stopOpacity={0.15}
+                      />
+                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient
+                      id="colorExpenses"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="#ef4444"
+                        stopOpacity={0.12}
+                      />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="none"
+                    stroke="#f1f5f9"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) =>
+                      v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v
+                    }
+                    width={35}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    iconType="circle"
+                    iconSize={6}
+                    wrapperStyle={{ fontSize: "0.75rem" }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#4f46e5"
+                    strokeWidth={2}
+                    fill="url(#colorRevenue)"
+                    name="Revenue"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="expenses"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    fill="url(#colorExpenses)"
+                    name="Expenses"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Sales by Category */}
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #f0f4f8",
+              borderRadius: 12,
+              padding: "clamp(1.25rem, 4vw, 1.75rem)",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ marginBottom: "1.75rem" }}>
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  margin: 0,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Sales by Category
+              </h3>
+              <p
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "#94a3b8",
+                  margin: "0.5rem 0 0",
+                  fontWeight: 400,
+                }}
+              >
+                Revenue distribution across categories
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.5rem",
+              }}
+            >
+              {categoryData.map((cat) => {
+                return (
+                  <div
+                    key={cat.name}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          flex: 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "6px",
+                            background: cat.color,
+                            flexShrink: 0,
+                            opacity: 0.85,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: "0.875rem",
+                            fontWeight: 500,
+                            color: "#374151",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {cat.name}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "0.875rem",
+                          fontWeight: 700,
+                          color: "#0f172a",
+                          flexShrink: 0,
+                          minWidth: "45px",
+                          textAlign: "right",
+                        }}
+                      >
+                        {cat.value}%
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: 7,
+                        background: "#f0f4f8",
+                        borderRadius: "99px",
+                        overflow: "hidden",
+                        position: "relative",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${cat.value}%`,
+                          background: cat.color,
+                          borderRadius: "99px",
+                          transition:
+                            "width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                          boxShadow: `0 2px 8px ${cat.color}40`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Total Revenue Summary */}
+            <div
+              style={{
+                marginTop: "1.75rem",
+                paddingTop: "1.25rem",
+                borderTop: "1px solid #f0f4f8",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    color: "#64748b",
+                  }}
+                >
+                  Total Categories
+                </span>
+                <span
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "#4f46e5",
+                  }}
+                >
+                  {categoryData.length}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Row 2 */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(clamp(280px, 100%, 600px), 1fr))",
+            gap: "1.5rem",
+          }}
+        >
+          {/* Monthly Orders */}
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: "clamp(1rem, 4vw, 1.5rem)",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ marginBottom: "1.25rem" }}>
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  margin: 0,
+                }}
+              >
+                Monthly Orders
+              </h3>
+              <p
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "#94a3b8",
+                  margin: "0.25rem 0 0",
+                }}
+              >
+                Orders placed vs returned
+              </p>
+            </div>
+            <div style={{ width: "100%", height: "100%", minHeight: "220px" }}>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={monthlyOrders} barGap={4}>
+                  <CartesianGrid
+                    strokeDasharray="none"
+                    stroke="#f1f5f9"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={35}
+                  />
+                  <Tooltip />
+                  <Legend
+                    iconType="circle"
+                    iconSize={6}
+                    wrapperStyle={{ fontSize: "0.75rem" }}
+                  />
+                  <Bar
+                    dataKey="orders"
+                    fill="#4f46e5"
+                    radius={[4, 4, 0, 0]}
+                    name="Orders"
+                  />
+                  <Bar
+                    dataKey="returned"
+                    fill="#f87171"
+                    radius={[4, 4, 0, 0]}
+                    name="Returned"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Top Products */}
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: "clamp(1rem, 4vw, 1.5rem)",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ marginBottom: "1.25rem" }}>
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  margin: 0,
+                }}
+              >
+                Top Products
+              </h3>
+              <p
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "#94a3b8",
+                  margin: "0.25rem 0 0",
                 }}
               >
                 By revenue this period
               </p>
             </div>
-            <button
-              style={{
-                fontSize: "0.8125rem",
-                color: "#4f46e5",
-                fontWeight: 600,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              View All
-            </button>
-          </div>
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ width: 36 }}>#</th>
-                  <th>Product</th>
-                  <th>Units</th>
-                  <th>Revenue</th>
-                  <th>Growth</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topProducts.map((product) => (
-                  <tr key={product.rank}>
-                    <td>
-                      <span
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "0.8125rem",
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.75rem 0.5rem",
+                        fontWeight: 600,
+                        color: "#64748b",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      #
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "left",
+                        padding: "0.75rem 0.5rem",
+                        fontWeight: 600,
+                        color: "#64748b",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      Product
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "right",
+                        padding: "0.75rem 0.5rem",
+                        fontWeight: 600,
+                        color: "#64748b",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      Units
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "right",
+                        padding: "0.75rem 0.5rem",
+                        fontWeight: 600,
+                        color: "#64748b",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      Revenue
+                    </th>
+                    <th
+                      style={{
+                        textAlign: "right",
+                        padding: "0.75rem 0.5rem",
+                        fontWeight: 600,
+                        color: "#64748b",
+                        fontSize: "0.7rem",
+                      }}
+                    >
+                      Growth
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topProducts.map((product, i) => (
+                    <tr
+                      key={product.rank}
+                      style={{
+                        borderBottom:
+                          i < topProducts.length - 1
+                            ? "1px solid #f1f5f9"
+                            : "none",
+                      }}
+                    >
+                      <td
                         style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          background: "#f1f5f9",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
+                          padding: "0.75rem 0.5rem",
+                          fontWeight: 600,
                           color: "#64748b",
                         }}
                       >
                         {product.rank}
-                      </span>
-                    </td>
-                    <td>
-                      <span
+                      </td>
+                      <td
                         style={{
-                          fontSize: "0.8125rem",
-                          fontWeight: 500,
+                          padding: "0.75rem 0.5rem",
                           color: "#374151",
-                          display: "block",
-                          maxWidth: 160,
+                          maxWidth: "120px",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
                       >
                         {product.name}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: "0.8125rem", color: "#64748b" }}>
-                        {product.units}
-                      </span>
-                    </td>
-                    <td>
-                      <span
+                      </td>
+                      <td
                         style={{
-                          fontSize: "0.8125rem",
-                          fontWeight: 700,
+                          padding: "0.75rem 0.5rem",
+                          textAlign: "right",
+                          color: "#64748b",
+                        }}
+                      >
+                        {product.units}
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.75rem 0.5rem",
+                          textAlign: "right",
+                          fontWeight: 600,
                           color: "#0f172a",
                         }}
                       >
-                        {product.revenue}
-                      </span>
-                    </td>
-                    <td>
-                      <span
+                        {formatINR(product.revenue)}
+                      </td>
+                      <td
                         style={{
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          color: product.growth.startsWith("+")
-                            ? "#15803d"
-                            : "#b91c1c",
-                          background: product.growth.startsWith("+")
-                            ? "#dcfce7"
-                            : "#fee2e2",
-                          padding: "0.1875rem 0.5rem",
-                          borderRadius: 99,
+                          padding: "0.75rem 0.5rem",
+                          textAlign: "right",
                         }}
                       >
-                        {product.growth}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            fontWeight: 600,
+                            color: product.growth.startsWith("+")
+                              ? "#15803d"
+                              : "#b91c1c",
+                            background: product.growth.startsWith("+")
+                              ? "#dcfce7"
+                              : "#fee2e2",
+                            padding: "0.125rem 0.375rem",
+                            borderRadius: 4,
+                            display: "inline-block",
+                          }}
+                        >
+                          {product.growth}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Traffic Sources */}
-      <div className="card">
-        <div className="card-header">
-          <h3
-            style={{
-              fontSize: "1rem",
-              fontWeight: 700,
-              color: "#0f172a",
-              margin: 0,
-            }}
-          >
-            Traffic Sources
-          </h3>
-          <p
-            style={{
-              fontSize: "0.8125rem",
-              color: "#94a3b8",
-              margin: "0.125rem 0 0",
-            }}
-          >
-            Where your visitors come from
-          </p>
-        </div>
-        <div className="card-body">
+        {/* Traffic Sources */}
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #e2e8f0",
+            borderRadius: 12,
+            padding: "clamp(1rem, 4vw, 1.5rem)",
+          }}
+        >
+          <div style={{ marginBottom: "1.5rem" }}>
+            <h3
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+              }}
+            >
+              Traffic Sources
+            </h3>
+            <p
+              style={{
+                fontSize: "0.8125rem",
+                color: "#94a3b8",
+                margin: "0.25rem 0 0",
+              }}
+            >
+              Where your visitors come from
+            </p>
+          </div>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1.25rem",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(clamp(200px, 100%, 250px), 1fr))",
+              gap: "clamp(1.5rem, 4vw, 2rem)",
             }}
           >
             {trafficSources.map((source) => (
@@ -774,7 +1065,9 @@ export default function Analytics() {
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    marginBottom: "0.5rem",
+                    alignItems: "center",
+                    marginBottom: "0.625rem",
+                    gap: "0.5rem",
                   }}
                 >
                   <div
@@ -782,6 +1075,8 @@ export default function Analytics() {
                       display: "flex",
                       alignItems: "center",
                       gap: "0.5rem",
+                      flex: 1,
+                      minWidth: 0,
                     }}
                   >
                     <span
@@ -790,6 +1085,7 @@ export default function Analytics() {
                         height: 10,
                         borderRadius: "50%",
                         background: source.color,
+                        flexShrink: 0,
                       }}
                     />
                     <span
@@ -797,6 +1093,9 @@ export default function Analytics() {
                         fontSize: "0.875rem",
                         fontWeight: 500,
                         color: "#374151",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {source.name}
@@ -807,6 +1106,7 @@ export default function Analytics() {
                       fontSize: "0.875rem",
                       fontWeight: 700,
                       color: "#0f172a",
+                      flexShrink: 0,
                     }}
                   >
                     {source.value}%
@@ -814,7 +1114,7 @@ export default function Analytics() {
                 </div>
                 <div
                   style={{
-                    height: 8,
+                    height: 6,
                     background: "#f1f5f9",
                     borderRadius: 99,
                     overflow: "hidden",
