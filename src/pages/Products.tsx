@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   Plus,
   Edit2,
@@ -14,6 +15,7 @@ import {
   Filter,
   LayoutGrid,
   LayoutList,
+  Eye,
 } from "lucide-react";
 import { ToastContainer, type ToastType } from "../components/ui/Toast";
 import {
@@ -39,6 +41,7 @@ interface Product {
   description: string;
   condition: string;
   image?: string;
+  images?: string[];
   skillLevel?: string;
   isActive: boolean;
   onSale: boolean;
@@ -157,6 +160,7 @@ const mapApiProductToUi = (product: ApiProduct): Product => ({
   description: product.description,
   condition: product.condition,
   image: product.image,
+  images: product.images,
   skillLevel: product.skillLevel,
   isActive: product.inStock,
   onSale: product.onSale ?? false,
@@ -174,7 +178,7 @@ const buildProductPayload = (data: Product): ProductPayload => {
     originalPrice: data.originalPrice,
     onSale: data.onSale,
     image: placeholderImage,
-    images: [],
+    images: data.images || [],
     description: data.description,
     rating: 0,
     reviews: 0,
@@ -355,6 +359,7 @@ export default function Products() {
     condition: "New",
     isActive: true,
     onSale: false,
+    images: [],
   });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -390,23 +395,34 @@ export default function Products() {
     );
   };
 
-  const handleImageClick = () => {
-    if (isUploadingImage) return;
-    fileInputRef.current?.click();
-  };
-
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentImages = formData.images || [];
+    if (currentImages.length >= 7) {
+      addToast("error", "Maximum Images Reached", "You can upload maximum 7 images");
+      return;
+    }
+
+    const remainingSlots = 7 - currentImages.length;
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
 
     setIsUploadingImage(true);
     try {
-      const { url } = await uploadProductImage(file);
-      setFormData((prev) => ({ ...prev, image: url }));
-      addToast("success", "Image Uploaded", "Product image has been uploaded.");
+      const uploadedUrls: string[] = [];
+      for (const file of filesToUpload) {
+        const { url } = await uploadProductImage(file);
+        uploadedUrls.push(url);
+      }
+      setFormData((prev) => ({
+        ...prev,
+        images: [...(prev.images || []), ...uploadedUrls],
+      }));
+      addToast("success", "Images Uploaded", `${uploadedUrls.length} image(s) uploaded successfully.`);
     } catch (err: any) {
       const message =
-        err?.response?.data?.message || "Failed to upload image. Try again.";
+        err?.response?.data?.message || "Failed to upload images. Try again.";
       addToast("error", "Upload Failed", message);
     } finally {
       setIsUploadingImage(false);
@@ -431,6 +447,7 @@ export default function Products() {
         condition: "New",
         isActive: true,
         onSale: false,
+        images: [],
       });
     }
     setIsModalOpen(true);
@@ -439,6 +456,15 @@ export default function Products() {
   const handleSave = async () => {
     if (!formData.name || !formData.price || formData.stock === undefined) {
       addToast("error", "Validation Error", "Please fill all required fields");
+      return;
+    }
+    const imageCount = formData.images?.length || 0;
+    if (imageCount < 4) {
+      addToast("error", "Validation Error", `Please upload at least 4 images (currently ${imageCount})`);
+      return;
+    }
+    if (imageCount > 7) {
+      addToast("error", "Validation Error", `Maximum 7 images allowed (currently ${imageCount})`);
       return;
     }
     try {
@@ -454,6 +480,7 @@ export default function Products() {
         description: formData.description || "",
         condition: formData.condition || "New",
         image: formData.image,
+        images: formData.images || [],
         skillLevel: formData.skillLevel,
         isActive: formData.isActive ?? true,
         onSale: formData.onSale ?? false,
@@ -1522,6 +1549,7 @@ export default function Products() {
                           >
                             <div
                               style={{
+                                position: "relative",
                                 width: "2.5rem",
                                 height: "2.5rem",
                                 borderRadius: "0.5rem",
@@ -1534,7 +1562,17 @@ export default function Products() {
                                 overflow: "hidden",
                               }}
                             >
-                              {product.image ? (
+                              {product.images && product.images.length > 0 ? (
+                                <img
+                                  src={product.images[0]}
+                                  alt={product.name}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                  }}
+                                />
+                              ) : product.image ? (
                                 <img
                                   src={product.image}
                                   alt={product.name}
@@ -1546,6 +1584,28 @@ export default function Products() {
                                 />
                               ) : (
                                 <Package size={18} color="#2563eb" />
+                              )}
+                              {product.images && product.images.length > 1 && (
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    bottom: "-4px",
+                                    right: "-4px",
+                                    background: "#2563eb",
+                                    color: "white",
+                                    width: "1.25rem",
+                                    height: "1.25rem",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "0.625rem",
+                                    fontWeight: 700,
+                                    border: "2px solid white",
+                                  }}
+                                >
+                                  {product.images.length}
+                                </div>
                               )}
                             </div>
                             <div style={{ minWidth: 0 }}>
@@ -1805,7 +1865,7 @@ export default function Products() {
                         "#e5e7eb";
                     }}
                   >
-                    {/* Image */}
+                    {/* Image Gallery */}
                     <div
                       style={{
                         position: "relative",
@@ -1818,7 +1878,29 @@ export default function Products() {
                         overflow: "hidden",
                       }}
                     >
-                      {product.image ? (
+                      {product.images && product.images.length > 0 ? (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            gap: "2px",
+                          }}
+                        >
+                          {product.images.map((img, idx) => (
+                            <img
+                              key={idx}
+                              src={img}
+                              alt={`${product.name} ${idx + 1}`}
+                              style={{
+                                flex: 1,
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ))}
+                        </div>
+                      ) : product.image ? (
                         <img
                           src={product.image}
                           alt={product.name}
@@ -2000,8 +2082,8 @@ export default function Products() {
                           gap: "0.5rem",
                         }}
                       >
-                        <button
-                          onClick={() => handleOpenModal(product)}
+                        <Link
+                          to={`/products/${product.id}`}
                           style={{
                             flex: 1,
                             paddingLeft: "0.75rem",
@@ -2020,16 +2102,52 @@ export default function Products() {
                             gap: "0.375rem",
                             fontSize: "0.75rem",
                             transition: "all 0.2s ease",
+                            textDecoration: "none",
                           }}
                           onMouseEnter={(e) => {
                             (
-                              e.currentTarget as HTMLButtonElement
+                              e.currentTarget as HTMLAnchorElement
                             ).style.background = "#e0f2fe";
                           }}
                           onMouseLeave={(e) => {
                             (
-                              e.currentTarget as HTMLButtonElement
+                              e.currentTarget as HTMLAnchorElement
                             ).style.background = "#f0f9ff";
+                          }}
+                        >
+                          <Eye size={14} />
+                          View
+                        </Link>
+                        <button
+                          onClick={() => handleOpenModal(product)}
+                          style={{
+                            flex: 1,
+                            paddingLeft: "0.75rem",
+                            paddingRight: "0.75rem",
+                            paddingTop: "0.5rem",
+                            paddingBottom: "0.5rem",
+                            background: "#f3f4f6",
+                            color: "#4b5563",
+                            fontWeight: 500,
+                            borderRadius: "0.5rem",
+                            border: "none",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.375rem",
+                            fontSize: "0.75rem",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            (
+                              e.currentTarget as HTMLButtonElement
+                            ).style.background = "#e5e7eb";
+                          }}
+                          onMouseLeave={(e) => {
+                            (
+                              e.currentTarget as HTMLButtonElement
+                            ).style.background = "#f3f4f6";
                           }}
                         >
                           <Edit2 size={14} />
@@ -2546,21 +2664,57 @@ export default function Products() {
             </select>
           </div>
 
-          {/* Image Upload */}
+          {/* Product Images Upload */}
           <div>
-            <label
+            <div
               style={{
-                display: "block",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                color: "#111827",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 marginBottom: "0.5rem",
               }}
             >
-              Product Image
-            </label>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "#111827",
+                }}
+              >
+                Product Images <span style={{ color: "#dc2626" }}>*</span>
+              </label>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: (formData.images?.length || 0) < 4 ? "#dc2626" : "#6b7280",
+                  fontWeight: 500,
+                }}
+              >
+                {(formData.images?.length || 0)}/7 images
+              </span>
+            </div>
+            {(formData.images?.length || 0) < 4 && (
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#dc2626",
+                  marginBottom: "0.5rem",
+                  padding: "0.5rem",
+                  background: "#fee2e2",
+                  borderRadius: "0.375rem",
+                  border: "1px solid #fecaca",
+                }}
+              >
+                ⚠️ Minimum 4 images required (currently {formData.images?.length || 0})
+              </div>
+            )}
             <div
-              onClick={handleImageClick}
+              onClick={() => {
+                if (!isUploadingImage && (formData.images?.length || 0) < 7) {
+                  fileInputRef.current?.click();
+                }
+              }}
               style={{
                 position: "relative",
                 border: "2px dashed #d1d5db",
@@ -2570,17 +2724,27 @@ export default function Products() {
                 paddingLeft: "1.5rem",
                 paddingRight: "1.5rem",
                 textAlign: "center",
-                cursor: isUploadingImage ? "not-allowed" : "pointer",
+                cursor:
+                  isUploadingImage || (formData.images?.length || 0) >= 7
+                    ? "not-allowed"
+                    : "pointer",
                 transition: "all 0.2s ease",
                 background: "#f8fafc",
-                minHeight: "120px",
+                minHeight: "100px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
+                opacity:
+                  isUploadingImage || (formData.images?.length || 0) >= 7
+                    ? 0.6
+                    : 1,
               }}
               onMouseEnter={(e) => {
-                if (!isUploadingImage) {
+                if (
+                  !isUploadingImage &&
+                  (formData.images?.length || 0) < 7
+                ) {
                   (e.currentTarget as HTMLDivElement).style.borderColor =
                     "#2563eb";
                   (e.currentTarget as HTMLDivElement).style.background =
@@ -2600,7 +2764,10 @@ export default function Products() {
                 ref={fileInputRef}
                 style={{ display: "none" }}
                 onChange={handleImageChange}
-                disabled={isUploadingImage}
+                disabled={
+                  isUploadingImage || (formData.images?.length || 0) >= 7
+                }
+                multiple
               />
               <Upload
                 size={32}
@@ -2616,10 +2783,10 @@ export default function Products() {
                 }}
               >
                 {isUploadingImage
-                  ? "Uploading image..."
-                  : formData.image
-                    ? "Image uploaded • Click to replace"
-                    : "Upload product image"}
+                  ? "Uploading images..."
+                  : (formData.images?.length || 0) >= 7
+                    ? "Maximum images reached"
+                    : "Click or drag images to upload"}
               </p>
               <p
                 style={{
@@ -2628,31 +2795,82 @@ export default function Products() {
                   margin: "0.375rem 0 0",
                 }}
               >
-                PNG, JPG, WebP (max 5MB)
+                PNG, JPG, WebP (max 5MB each) • Upload 4-7 images
               </p>
-              {formData.image && !isUploadingImage && (
-                <div
-                  style={{
-                    marginTop: "1rem",
-                    display: "flex",
-                    justifyContent: "center",
-                    width: "100%",
-                  }}
-                >
-                  <img
-                    src={formData.image}
-                    alt="Product"
-                    style={{
-                      maxHeight: "100px",
-                      maxWidth: "100%",
-                      borderRadius: "0.5rem",
-                      border: "1px solid #e5e7eb",
-                      objectFit: "cover",
-                    }}
-                  />
-                </div>
-              )}
             </div>
+
+            {/* Image Previews */}
+            {(formData.images?.length || 0) > 0 && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+                  gap: "0.75rem",
+                  marginTop: "1rem",
+                }}
+              >
+                {formData.images?.map((url, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      position: "relative",
+                      borderRadius: "0.5rem",
+                      overflow: "hidden",
+                      border: "1px solid #e5e7eb",
+                      backgroundColor: "#f3f4f6",
+                      aspectRatio: "1",
+                    }}
+                  >
+                    <img
+                      src={url}
+                      alt={`Product ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          images: prev.images?.filter((_, i) => i !== index) || [],
+                        }));
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: "0.25rem",
+                        right: "0.25rem",
+                        background: "rgba(0, 0, 0, 0.7)",
+                        border: "none",
+                        color: "white",
+                        width: "1.5rem",
+                        height: "1.5rem",
+                        borderRadius: "50%",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 0,
+                        fontSize: "0.875rem",
+                        transition: "background 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.background =
+                          "rgba(0, 0, 0, 0.9)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.background =
+                          "rgba(0, 0, 0, 0.7)";
+                      }}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Modal>
