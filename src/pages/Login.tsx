@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { Eye, EyeOff, Music2, Lock } from "lucide-react";
 
-const API_URL = "http://localhost:5000/api/v1";
+const API_URL = "http://localhost:5000/api";
 
 interface LoginProps {
   onLogin: () => void;
