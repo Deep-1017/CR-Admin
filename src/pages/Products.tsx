@@ -24,6 +24,7 @@ import {
   updateProduct as updateProductApi,
   deleteProduct as deleteProductApi,
   type Product as ApiProduct,
+  type ProductVariant as ApiProductVariant,
   type ProductPayload,
 } from "../api/products";
 import { uploadImage as uploadProductImage } from "../api/upload";
@@ -45,6 +46,17 @@ interface Product {
   skillLevel?: string;
   isActive: boolean;
   onSale: boolean;
+  variants: ProductVariantFormValue[];
+}
+
+interface ProductVariantFormValue {
+  variantId?: string;
+  configuration: string;
+  finish: string;
+  sku: string;
+  stock: number;
+  price?: number;
+  images?: string[];
 }
 
 interface ToastMsg {
@@ -123,6 +135,80 @@ const BRANDS = [
   "Nlabs",
 ];
 
+const createEmptyVariant = (): ProductVariantFormValue => ({
+  configuration: "",
+  finish: "",
+  sku: "",
+  stock: 0,
+  price: undefined,
+  images: [],
+});
+
+const buildLegacyVariantSku = (productId: string): string => {
+  const compactId = productId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const identifier = compactId.slice(0, 12) || "CATALOG1";
+  return `PRD-${identifier}-STANDARD-DEFAULT`;
+};
+
+const createLegacyVariant = (
+  product: Pick<ApiProduct, "id" | "stockCount">,
+): ProductVariantFormValue => ({
+  configuration: "Default",
+  finish: "Standard",
+  sku: buildLegacyVariantSku(product.id),
+  stock: Math.max(0, product.stockCount || 0),
+  price: undefined,
+  images: [],
+});
+
+const normalizeVariantFormValue = (
+  variant?: Partial<ApiProductVariant>,
+): ProductVariantFormValue => ({
+  variantId: variant?.variantId,
+  configuration: variant?.configuration || "",
+  finish: variant?.finish || "",
+  sku: variant?.sku || "",
+  stock: Number.isFinite(variant?.stock) ? Math.max(0, Number(variant?.stock)) : 0,
+  price:
+    variant?.price !== undefined && Number.isFinite(variant.price)
+      ? Number(variant.price)
+      : undefined,
+  images: variant?.images || [],
+});
+
+const sanitizeVariants = (
+  variants: ProductVariantFormValue[] = [],
+): ApiProductVariant[] =>
+  variants.flatMap((variant) => {
+    const configuration = variant.configuration.trim();
+    const finish = variant.finish.trim();
+    const sku = variant.sku.trim().toUpperCase();
+    const stock = Math.max(0, Number(variant.stock) || 0);
+    const price =
+      variant.price !== undefined && variant.price !== null && `${variant.price}`.trim() !== ""
+        ? Number(variant.price)
+        : undefined;
+
+    if (!configuration && !finish && !sku && stock === 0 && price === undefined) {
+      return [];
+    }
+
+    return [{
+      ...(variant.variantId ? { variantId: variant.variantId } : {}),
+      configuration,
+      finish,
+      sku,
+      stock,
+      ...(price !== undefined ? { price } : {}),
+      images: variant.images || [],
+    }];
+  });
+
+const getTotalVariantStock = (
+  variants: Array<Pick<ProductVariantFormValue, "stock">> = [],
+): number =>
+  variants.reduce((total, variant) => total + Math.max(0, Number(variant.stock) || 0), 0);
+
 const getStockInfo = (
   stock: number,
 ): { label: string; bgColor: string; textColor: string; dotColor: string } => {
@@ -151,10 +237,10 @@ const getStockInfo = (
 const mapApiProductToUi = (product: ApiProduct): Product => ({
   id: product.id,
   name: product.name,
-  sku: product.id,
+  sku: product.variants?.[0]?.sku || product.id,
   category: product.category,
   brand: product.brand,
-  price: product.price,
+  price: product.basePrice ?? product.price,
   originalPrice: product.originalPrice,
   stock: product.stockCount,
   description: product.description,
@@ -164,16 +250,26 @@ const mapApiProductToUi = (product: ApiProduct): Product => ({
   skillLevel: product.skillLevel,
   isActive: product.inStock,
   onSale: product.onSale ?? false,
+  variants:
+    product.variants && product.variants.length > 0
+      ? product.variants.map((variant) => normalizeVariantFormValue(variant))
+      : [createLegacyVariant(product)],
 });
 
 const buildProductPayload = (data: Product): ProductPayload => {
+  const primaryImage =
+    data.images?.find((image) => typeof image === "string" && image.trim().length > 0) ||
+    data.image;
   const placeholderImage =
-    data.image ||
+    primaryImage ||
     `https://via.placeholder.com/400x400.png?text=${encodeURIComponent(data.name)}`;
+  const variants = sanitizeVariants(data.variants);
+  const stockCount = getTotalVariantStock(variants);
 
   return {
     name: data.name,
     category: data.category,
+    basePrice: data.price,
     price: data.price,
     originalPrice: data.originalPrice,
     onSale: data.onSale,
@@ -185,8 +281,9 @@ const buildProductPayload = (data: Product): ProductPayload => {
     brand: data.brand,
     condition: data.condition,
     skillLevel: data.skillLevel || "Beginner",
-    inStock: data.isActive,
-    stockCount: data.stock,
+    inStock: stockCount > 0 ? data.isActive : false,
+    stockCount,
+    variants,
     specifications: [],
   };
 };
@@ -354,12 +451,13 @@ export default function Products() {
     category: "Amplifier",
     brand: "Ahuja",
     price: undefined,
-    stock: undefined,
+    stock: 0,
     description: "",
     condition: "New",
     isActive: true,
     onSale: false,
     images: [],
+    variants: [createEmptyVariant()],
   });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -415,10 +513,14 @@ export default function Products() {
         const { url } = await uploadProductImage(file);
         uploadedUrls.push(url);
       }
-      setFormData((prev) => ({
-        ...prev,
-        images: [...(prev.images || []), ...uploadedUrls],
-      }));
+      setFormData((prev) => {
+        const nextImages = [...(prev.images || []), ...uploadedUrls];
+        return {
+          ...prev,
+          image: nextImages[0] || prev.image,
+          images: nextImages,
+        };
+      });
       addToast("success", "Images Uploaded", `${uploadedUrls.length} image(s) uploaded successfully.`);
     } catch (err: any) {
       const message =
@@ -433,7 +535,13 @@ export default function Products() {
   const handleOpenModal = (product?: Product) => {
     if (product) {
       setEditingId(product.id);
-      setFormData(product);
+      setFormData({
+        ...product,
+        variants:
+          product.variants && product.variants.length > 0
+            ? product.variants.map((variant) => normalizeVariantFormValue(variant))
+            : [createEmptyVariant()],
+      });
     } else {
       setEditingId(null);
       setFormData({
@@ -442,20 +550,123 @@ export default function Products() {
         category: "Amplifier",
         brand: "Ahuja",
         price: undefined,
-        stock: undefined,
+        stock: 0,
         description: "",
         condition: "New",
         isActive: true,
         onSale: false,
         images: [],
+        variants: [createEmptyVariant()],
       });
     }
     setIsModalOpen(true);
   };
 
+  const handleVariantChange = (
+    index: number,
+    field: keyof ProductVariantFormValue,
+    value: string | number | undefined,
+  ) => {
+    setFormData((prev) => {
+      const currentVariants = prev.variants?.length
+        ? prev.variants.map((variant) => ({ ...variant }))
+        : [createEmptyVariant()];
+      const nextVariants = currentVariants.map((variant, variantIndex) => {
+        if (variantIndex !== index) {
+          return variant;
+        }
+
+        if (field === "stock") {
+          return {
+            ...variant,
+            stock: Math.max(0, Number(value) || 0),
+          };
+        }
+
+        if (field === "price") {
+          return {
+            ...variant,
+            price:
+              value === "" || value === undefined || value === null
+                ? undefined
+                : Math.max(0, Number(value) || 0),
+          };
+        }
+
+        return {
+          ...variant,
+          [field]: typeof value === "string" ? value : "",
+        };
+      });
+
+      return {
+        ...prev,
+        variants: nextVariants,
+        stock: getTotalVariantStock(nextVariants),
+      };
+    });
+  };
+
+  const handleAddVariant = () => {
+    setFormData((prev) => {
+      const nextVariants = [...(prev.variants || [createEmptyVariant()]), createEmptyVariant()];
+      return {
+        ...prev,
+        variants: nextVariants,
+        stock: getTotalVariantStock(nextVariants),
+      };
+    });
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    setFormData((prev) => {
+      const currentVariants = prev.variants || [createEmptyVariant()];
+      const nextVariants = currentVariants.filter((_, variantIndex) => variantIndex !== index);
+      const safeVariants = nextVariants.length > 0 ? nextVariants : [createEmptyVariant()];
+
+      return {
+        ...prev,
+        variants: safeVariants,
+        stock: getTotalVariantStock(safeVariants),
+      };
+    });
+  };
+
   const handleSave = async () => {
-    if (!formData.name || !formData.price || formData.stock === undefined) {
+    const sanitizedVariants = sanitizeVariants(formData.variants || []);
+
+    if (!formData.name || !formData.price) {
       addToast("error", "Validation Error", "Please fill all required fields");
+      return;
+    }
+    if (sanitizedVariants.length === 0) {
+      addToast("error", "Validation Error", "Add at least one complete variant before saving.");
+      return;
+    }
+    const incompleteVariant = (formData.variants || []).find((variant) => {
+      const hasAnyValue =
+        variant.configuration.trim() ||
+        variant.finish.trim() ||
+        variant.sku.trim() ||
+        (variant.stock ?? 0) > 0 ||
+        variant.price !== undefined;
+
+      return hasAnyValue && (!variant.configuration.trim() || !variant.finish.trim() || !variant.sku.trim());
+    });
+    if (incompleteVariant) {
+      addToast(
+        "error",
+        "Validation Error",
+        "Each variant must include configuration, finish, and SKU.",
+      );
+      return;
+    }
+    const duplicateSku = sanitizedVariants.find(
+      (variant, index) =>
+        sanitizedVariants.findIndex((candidate) => candidate.sku === variant.sku) !== index,
+    );
+    if (duplicateSku) {
+      addToast("error", "Validation Error", `Duplicate variant SKU: ${duplicateSku.sku}`);
       return;
     }
     const imageCount = formData.images?.length || 0;
@@ -476,7 +687,7 @@ export default function Products() {
         brand: formData.brand || "Ahuja",
         price: formData.price,
         originalPrice: formData.originalPrice,
-        stock: formData.stock,
+        stock: getTotalVariantStock(sanitizedVariants),
         description: formData.description || "",
         condition: formData.condition || "New",
         image: formData.image,
@@ -484,6 +695,7 @@ export default function Products() {
         skillLevel: formData.skillLevel,
         isActive: formData.isActive ?? true,
         onSale: formData.onSale ?? false,
+        variants: sanitizedVariants.map((variant) => normalizeVariantFormValue(variant)),
       };
 
       if (editingId) {
@@ -2501,7 +2713,7 @@ export default function Products() {
             </div>
           </div>
 
-          {/* Price & Stock */}
+          {/* Price & Variant Stock */}
           <div
             style={{
               display: "grid",
@@ -2546,43 +2758,330 @@ export default function Products() {
                 }}
               />
             </div>
-            <div>
-              <label
+          </div>
+
+          {/* Variants */}
+          <div
+            style={{
+              border: "1px solid #e2e8f0",
+              borderRadius: "0.75rem",
+              padding: "1rem",
+              background: "#f8fafc",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "1rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    color: "#111827",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  Variants <span style={{ color: "#dc2626" }}>*</span>
+                </label>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.75rem",
+                    color: "#64748b",
+                  }}
+                >
+                  Add every sellable combination with its own configuration, finish, SKU, and stock.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddVariant}
                 style={{
-                  display: "block",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.625rem 1rem",
+                  borderRadius: "999px",
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#0f172a",
                   fontSize: "0.875rem",
                   fontWeight: 600,
-                  color: "#111827",
-                  marginBottom: "0.5rem",
+                  cursor: "pointer",
                 }}
               >
-                Stock Quantity <span style={{ color: "#dc2626" }}>*</span>
-              </label>
-              <input
-                type="number"
-                placeholder="0"
-                value={formData.stock ?? ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    stock: parseInt(e.target.value) || 0,
-                  })
-                }
-                style={{
-                  width: "100%",
-                  paddingLeft: "1rem",
-                  paddingRight: "1rem",
-                  paddingTop: "0.625rem",
-                  paddingBottom: "0.625rem",
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "0.5rem",
-                  fontSize: "0.875rem",
-                  transition: "all 0.2s ease",
-                  boxSizing: "border-box",
-                }}
-              />
+                <Plus size={16} />
+                Add Variant
+              </button>
             </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <div
+                style={{
+                  padding: "0.625rem 0.875rem",
+                  borderRadius: "999px",
+                  background: "#e2e8f0",
+                  color: "#0f172a",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                }}
+              >
+                {sanitizeVariants(formData.variants || []).length} configured variant(s)
+              </div>
+              <div
+                style={{
+                  padding: "0.625rem 0.875rem",
+                  borderRadius: "999px",
+                  background: "#dcfce7",
+                  color: "#166534",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                }}
+              >
+                Total stock: {getTotalVariantStock(formData.variants || [])}
+              </div>
+            </div>
+
+            {(formData.variants || [createEmptyVariant()]).map((variant, index) => (
+              <div
+                key={variant.variantId || `${index}-${variant.sku}-${variant.configuration}-${variant.finish}`}
+                style={{
+                  border: "1px solid #dbe4ee",
+                  borderRadius: "0.75rem",
+                  background: "#ffffff",
+                  padding: "1rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "1rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <h4
+                      style={{
+                        margin: 0,
+                        fontSize: "0.95rem",
+                        fontWeight: 700,
+                        color: "#111827",
+                      }}
+                    >
+                      Variant {index + 1}
+                    </h4>
+                    <p
+                      style={{
+                        margin: "0.25rem 0 0",
+                        fontSize: "0.75rem",
+                        color: "#64748b",
+                      }}
+                    >
+                      Use a unique SKU for each purchasable option.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveVariant(index)}
+                    disabled={(formData.variants?.length || 0) <= 1}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.5rem 0.875rem",
+                      borderRadius: "999px",
+                      border: "1px solid #fecaca",
+                      background: "#fff1f2",
+                      color: "#b91c1c",
+                      fontSize: "0.8125rem",
+                      fontWeight: 600,
+                      cursor: (formData.variants?.length || 0) <= 1 ? "not-allowed" : "pointer",
+                      opacity: (formData.variants?.length || 0) <= 1 ? 0.5 : 1,
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    Remove
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: "1rem",
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.8125rem",
+                        fontWeight: 600,
+                        color: "#111827",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Configuration <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Right-Handed"
+                      value={variant.configuration}
+                      onChange={(e) =>
+                        handleVariantChange(index, "configuration", e.target.value)
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "0.625rem 0.875rem",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "0.5rem",
+                        fontSize: "0.875rem",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.8125rem",
+                        fontWeight: 600,
+                        color: "#111827",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Finish <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Black"
+                      value={variant.finish}
+                      onChange={(e) => handleVariantChange(index, "finish", e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "0.625rem 0.875rem",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "0.5rem",
+                        fontSize: "0.875rem",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.8125rem",
+                        fontWeight: 600,
+                        color: "#111827",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      SKU <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="AMP-50000-BLK-RH"
+                      value={variant.sku}
+                      onChange={(e) =>
+                        handleVariantChange(index, "sku", e.target.value.toUpperCase())
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "0.625rem 0.875rem",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "0.5rem",
+                        fontSize: "0.875rem",
+                        boxSizing: "border-box",
+                        textTransform: "uppercase",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.8125rem",
+                        fontWeight: 600,
+                        color: "#111827",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Stock <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={variant.stock}
+                      onChange={(e) => handleVariantChange(index, "stock", e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "0.625rem 0.875rem",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "0.5rem",
+                        fontSize: "0.875rem",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.8125rem",
+                        fontWeight: 600,
+                        color: "#111827",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Variant Price Override
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Leave blank to use base price"
+                      value={variant.price ?? ""}
+                      onChange={(e) => handleVariantChange(index, "price", e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "0.625rem 0.875rem",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "0.5rem",
+                        fontSize: "0.875rem",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Description */}
@@ -2832,10 +3331,14 @@ export default function Products() {
                     />
                     <button
                       onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          images: prev.images?.filter((_, i) => i !== index) || [],
-                        }));
+                        setFormData((prev) => {
+                          const nextImages = prev.images?.filter((_, i) => i !== index) || [];
+                          return {
+                            ...prev,
+                            image: nextImages[0] || "",
+                            images: nextImages,
+                          };
+                        });
                       }}
                       style={{
                         position: "absolute",

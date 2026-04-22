@@ -13,11 +13,22 @@ export interface ProductReview {
   comment: string;
 }
 
+export interface ProductVariant {
+  variantId?: string;
+  configuration: string;
+  finish: string;
+  stock: number;
+  sku: string;
+  price?: number;
+  images?: string[];
+}
+
 // Mirrors the backend Product model shape (see CR-Backend/src/models/product.model.ts)
 export interface Product {
   id: string;
   name: string;
   category: string;
+  basePrice?: number;
   price: number;
   originalPrice?: number;
   onSale?: boolean;
@@ -31,6 +42,9 @@ export interface Product {
   skillLevel: string;
   inStock: boolean;
   stockCount: number;
+  variants: ProductVariant[];
+  availableConfigurations?: string[];
+  availableFinishes?: string[];
   specifications: ProductSpecification[];
   customerReviews: ProductReview[];
   createdAt: string;
@@ -86,4 +100,3 @@ export const updateProduct = async (
 export const deleteProduct = async (id: string): Promise<void> => {
   await api.delete(`/products/${id}`);
 };
-
