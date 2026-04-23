@@ -135,6 +135,10 @@ const BRANDS = [
   "Nlabs",
 ];
 
+// SKU validation: Must match format like AMP-50000-BLK-RH
+const SKU_PATTERN = /^[A-Z]{2,10}-[A-Z0-9]{1,20}(?:-[A-Z0-9]{2,12}){2,5}$/;
+const validateSKU = (sku: string): boolean => SKU_PATTERN.test(sku.trim().toUpperCase());
+
 const createEmptyVariant = (): ProductVariantFormValue => ({
   configuration: "",
   finish: "",
@@ -667,6 +671,16 @@ export default function Products() {
     );
     if (duplicateSku) {
       addToast("error", "Validation Error", `Duplicate variant SKU: ${duplicateSku.sku}`);
+      return;
+    }
+    // Validate SKU format: must match pattern like AMP-50000-BLK-RH
+    const invalidSkuVariant = sanitizedVariants.find((variant) => !validateSKU(variant.sku));
+    if (invalidSkuVariant) {
+      addToast(
+        "error",
+        "Invalid SKU Format",
+        `SKU "${invalidSkuVariant.sku}" is invalid. Format must be like: AMP-50000-BLK-RH (2-10 letters, then numbers/letters separated by hyphens).`,
+      );
       return;
     }
     const imageCount = formData.images?.length || 0;
@@ -3013,13 +3027,18 @@ export default function Products() {
                         width: "100%",
                         padding: "0.625rem 0.875rem",
                         background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
+                        border: variant.sku && !validateSKU(variant.sku) ? "2px solid #dc2626" : "1px solid #e2e8f0",
                         borderRadius: "0.5rem",
                         fontSize: "0.875rem",
                         boxSizing: "border-box",
                         textTransform: "uppercase",
                       }}
                     />
+                    {variant.sku && !validateSKU(variant.sku) && (
+                      <p style={{ color: "#dc2626", fontSize: "0.75rem", marginTop: "0.25rem", margin: "0.25rem 0 0 0" }}>
+                        Invalid format. Use format like: AMP-50000-BLK-RH
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label
