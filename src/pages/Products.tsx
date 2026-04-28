@@ -139,7 +139,11 @@ const BRANDS = [
 const SKU_PATTERN = /^[A-Z]{2,10}-[A-Z0-9]{1,20}(?:-[A-Z0-9]{2,12}){2,5}$/;
 const validateSKU = (sku: string): boolean => SKU_PATTERN.test(sku.trim().toUpperCase());
 
+// Generate unique ID for form variants to maintain stable keys
+const generateFormVariantId = (): string => `form-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
 const createEmptyVariant = (): ProductVariantFormValue => ({
+  variantId: generateFormVariantId(),
   configuration: "",
   finish: "",
   sku: "",
@@ -157,6 +161,7 @@ const buildLegacyVariantSku = (productId: string): string => {
 const createLegacyVariant = (
   product: Pick<ApiProduct, "id" | "stockCount">,
 ): ProductVariantFormValue => ({
+  variantId: generateFormVariantId(),
   configuration: "Default",
   finish: "Standard",
   sku: buildLegacyVariantSku(product.id),
@@ -180,6 +185,11 @@ const normalizeVariantFormValue = (
   images: variant?.images || [],
 });
 
+const isValidObjectId = (id: string): boolean => {
+  // MongoDB ObjectIds are 24 hex characters or valid UUID format
+  return /^[0-9a-f]{24}$/i.test(id) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+};
+
 const sanitizeVariants = (
   variants: ProductVariantFormValue[] = [],
 ): ApiProductVariant[] =>
@@ -198,7 +208,7 @@ const sanitizeVariants = (
     }
 
     return [{
-      ...(variant.variantId ? { variantId: variant.variantId } : {}),
+      ...(variant.variantId && isValidObjectId(variant.variantId) ? { variantId: variant.variantId } : {}),
       configuration,
       finish,
       sku,
@@ -2874,7 +2884,7 @@ export default function Products() {
 
             {(formData.variants || [createEmptyVariant()]).map((variant, index) => (
               <div
-                key={variant.variantId || `${index}-${variant.sku}-${variant.configuration}-${variant.finish}`}
+                key={variant.variantId || `variant-${index}`}
                 style={{
                   border: "1px solid #dbe4ee",
                   borderRadius: "0.75rem",

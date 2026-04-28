@@ -70,7 +70,7 @@ const mapUiStatusToBackend = (status: OrderStatus): BackendOrderStatus => {
   }
 };
 
-const mapApiOrderToUi = (order: ApiOrder): Order => {
+const mapApiOrderToUi = (order: ApiOrder | any): Order => {
   const firstName = order.customer?.firstName || "";
   const lastName = order.customer?.lastName || "";
   const customer = lastName
@@ -79,11 +79,14 @@ const mapApiOrderToUi = (order: ApiOrder): Order => {
   const customerInitials =
     (firstName?.[0] || "").toUpperCase() + (lastName?.[0] || "").toUpperCase();
 
-  const firstItem = order.items[0];
+  const firstItem = order.items?.[0];
   const productName = firstItem?.name || "Multiple items";
 
+  // Fallback to _id if id is not present
+  const orderId = order.id || order._id || "";
+
   return {
-    id: order.id,
+    id: orderId,
     customer,
     customerInitials,
     email: order.customer?.email || "",
@@ -98,7 +101,7 @@ const mapApiOrderToUi = (order: ApiOrder): Order => {
     address: `${order.customer?.address || ""}, ${order.customer?.city || ""}${
       order.customer?.state ? `, ${order.customer.state}` : ""
     } ${order.customer?.zipCode || ""}`.trim(),
-    items: order.items.map((item) => ({
+    items: (order.items || []).map((item) => ({
       name: item.name,
       qty: item.quantity,
       price: item.price,
