@@ -15,7 +15,7 @@
 
 ## 📋 Overview
 
-**CR Admin** is the administrative dashboard for the CR e-commerce platform. It provides a centralized interface for store managers to monitor sales performance, manage product inventory, and track customer orders — all in a clean, responsive UI.
+**CR Admin** is the administrative dashboard for the CR musical instruments e-commerce platform. It provides a centralized interface for store managers to monitor sales performance, manage instrument inventory, and track customer orders — all in a clean, responsive UI.
 
 ---
 
@@ -23,8 +23,8 @@
 
 | Feature | Description |
 |--------|-------------|
-| 📊 **Analytics Dashboard** | Visual charts for revenue, orders, and product performance |
-| 📦 **Products Management** | Create, update, and delete products with image support |
+| 📊 **Analytics Dashboard** | Visual charts for revenue, orders, and instrument performance |
+| 🎸 **Instruments Management** | Create, update, and delete instruments with variant management |
 | 🛒 **Orders Management** | View, filter, and update order statuses in real-time |
 | 🔐 **Secure Access** | JWT-based authentication with protected admin routes |
 | 📱 **Responsive Design** | Fully mobile-friendly layout |
