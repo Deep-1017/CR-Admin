@@ -56,7 +56,7 @@ export interface FetchOrdersParams {
 export const fetchOrders = async (
   params?: FetchOrdersParams,
 ): Promise<PaginatedOrdersResponse> => {
-  const response = await api.get<PaginatedOrdersResponse>("/orders", {
+  const response = await api.get<PaginatedOrdersResponse>("/orders/admin/all", {
     params,
   });
   return response.data;

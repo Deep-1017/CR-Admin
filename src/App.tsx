@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Orders from "./pages/Orders";
+import Reviews from "./pages/Reviews";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -25,6 +26,7 @@ function App() {
           <Route path="products" element={<Products />} />
           <Route path="products/:productId" element={<ProductDetail />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="reviews" element={<Reviews />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="settings" element={<Settings />} />
         </Route>

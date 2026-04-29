@@ -8,6 +8,7 @@ import {
   LogOut,
   Music2,
   X,
+  Star,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ const navGroups = [
     items: [
       { path: "/products", icon: Package, label: "Products" },
       { path: "/orders", icon: ShoppingCart, label: "Orders" },
+      { path: "/reviews", icon: Star, label: "Reviews" },
     ],
   },
   {
