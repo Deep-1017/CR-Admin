@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 import {
   Globe,
   Bell,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { ToastContainer, type ToastType } from "../components/ui/Toast";
 import { formatINR } from "../lib/utils";
+import { changePassword as changePasswordApi } from "../api/auth";
 
 interface ToastMsg {
   id: string;
@@ -79,6 +81,13 @@ export default function Settings() {
     customerReviews: false,
     marketingEmails: false,
   });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: "",
+  });
+  const [passwordError, setPasswordError] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const addToast = (type: ToastType, title: string, message?: string) => {
     const id = Date.now().toString();
@@ -95,6 +104,51 @@ export default function Settings() {
       `${section} Saved`,
       "Your changes have been saved successfully.",
     );
+  };
+
+  const handlePasswordFieldChange = (
+    field: keyof typeof passwordForm,
+    value: string,
+  ) => {
+    setPasswordForm((prev) => ({ ...prev, [field]: value }));
+    setPasswordError("");
+  };
+
+  const handleChangePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordError("");
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changePasswordApi(passwordForm);
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: "",
+      });
+      addToast(
+        "success",
+        "Password Changed",
+        "Your password has been updated successfully.",
+      );
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        "Unable to change password. Please try again.";
+      setPasswordError(message);
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -777,7 +831,8 @@ export default function Settings() {
                       Change Password
                     </h3>
                   </div>
-                  <div
+                  <form
+                    onSubmit={handleChangePassword}
                     style={{
                       padding: "clamp(1rem, 4vw, 1.5rem)",
                       display: "flex",
@@ -799,6 +854,14 @@ export default function Settings() {
                       </label>
                       <input
                         type="password"
+                        value={passwordForm.currentPassword}
+                        onChange={(e) =>
+                          handlePasswordFieldChange(
+                            "currentPassword",
+                            e.target.value,
+                          )
+                        }
+                        required
                         placeholder="••••••••"
                         style={{
                           width: "100%",
@@ -828,6 +891,12 @@ export default function Settings() {
                       </label>
                       <input
                         type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) =>
+                          handlePasswordFieldChange("newPassword", e.target.value)
+                        }
+                        minLength={8}
+                        required
                         placeholder="••••••••"
                         style={{
                           width: "100%",
@@ -857,6 +926,15 @@ export default function Settings() {
                       </label>
                       <input
                         type="password"
+                        value={passwordForm.confirmNewPassword}
+                        onChange={(e) =>
+                          handlePasswordFieldChange(
+                            "confirmNewPassword",
+                            e.target.value,
+                          )
+                        }
+                        minLength={8}
+                        required
                         placeholder="••••••••"
                         style={{
                           width: "100%",
@@ -872,7 +950,46 @@ export default function Settings() {
                         }}
                       />
                     </div>
-                  </div>
+                    {passwordError && (
+                      <p
+                        style={{
+                          color: "#b91c1c",
+                          background: "#fef2f2",
+                          border: "1px solid #fecaca",
+                          borderRadius: "0.5rem",
+                          padding: "0.75rem",
+                          margin: 0,
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {passwordError}
+                      </p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={isChangingPassword}
+                      style={{
+                        alignSelf: "flex-start",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        padding: "0.625rem 1rem",
+                        background: isChangingPassword ? "#94a3b8" : "#4f46e5",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        borderRadius: "0.5rem",
+                        border: "none",
+                        cursor: isChangingPassword ? "not-allowed" : "pointer",
+                        transition: "all 0.2s ease",
+                        fontSize: "0.875rem",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <Save size={16} />
+                      {isChangingPassword ? "Changing..." : "Change Password"}
+                    </button>
+                  </form>
                 </div>
 
                 <div

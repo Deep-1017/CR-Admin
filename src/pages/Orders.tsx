@@ -101,7 +101,7 @@ const mapApiOrderToUi = (order: ApiOrder | any): Order => {
     address: `${order.customer?.address || ""}, ${order.customer?.city || ""}${
       order.customer?.state ? `, ${order.customer.state}` : ""
     } ${order.customer?.zipCode || ""}`.trim(),
-    items: (order.items || []).map((item) => ({
+    items: (order.items || []).map((item: any) => ({
       name: item.name,
       qty: item.quantity,
       price: item.price,

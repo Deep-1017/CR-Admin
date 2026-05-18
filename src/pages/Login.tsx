@@ -8,6 +8,17 @@ interface LoginProps {
   onLogin: () => void;
 }
 
+interface LoginResponse {
+  accessToken?: string;
+  token?: string;
+  data?: {
+    token?: string;
+  };
+  user?: {
+    role?: string;
+  };
+}
+
 export default function Login({ onLogin }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,13 +31,19 @@ export default function Login({ onLogin }: LoginProps) {
     setError("");
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, {
+      const res = await axios.post<LoginResponse>(`${API_URL}/auth/login`, {
         email,
         password,
       });
-      const token = res.data?.token || res.data?.data?.token;
+      const token = res.data?.accessToken || res.data?.token || res.data?.data?.token;
       if (!token) throw new Error("No token received");
-      localStorage.setItem("token", token);
+      const role = res.data?.user?.role;
+      if (role !== "admin") {
+        localStorage.removeItem("access_token");
+        setError("Access denied. Admin account required.");
+        return;
+      }
+      localStorage.setItem("access_token", token);
       onLogin();
     } catch (err: any) {
       const msg = err.response?.data?.message || "Invalid email or password.";

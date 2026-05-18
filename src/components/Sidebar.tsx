@@ -9,6 +9,7 @@ import {
   Music2,
   X,
   Star,
+  Users,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ const navGroups = [
     items: [
       { path: "/products", icon: Package, label: "Products" },
       { path: "/orders", icon: ShoppingCart, label: "Orders" },
+      { path: "/customers", icon: Users, label: "Customers" },
       { path: "/reviews", icon: Star, label: "Reviews" },
     ],
   },
@@ -47,7 +49,7 @@ export default function Sidebar({
   const location = useLocation();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
     window.location.reload();
   };
 

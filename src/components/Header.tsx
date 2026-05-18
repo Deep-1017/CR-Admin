@@ -36,7 +36,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("access_token");
     window.location.reload();
   };
 
