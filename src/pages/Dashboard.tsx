@@ -1,19 +1,31 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   TrendingUp,
   Users,
   ShoppingBag,
   DollarSign,
   Calendar,
+  Loader2,
 } from "lucide-react";
 import SalesChart from "../components/SalesChart";
 import { formatINR } from "../lib/utils";
+import {
+  fetchRevenueAnalytics,
+  fetchOrdersAnalytics,
+  fetchCustomersAnalytics,
+  fetchTopProductsAnalytics,
+  type RevenuePoint,
+  type TopProduct,
+} from "../api/analytics";
+import { fetchOrders, type Order as ApiOrder } from "../api/orders";
 
-// Type definitions
+// Local display types
 interface Stat {
   label: string;
   value: number | string;
   change: number;
   trend: "up" | "down";
+  currency?: boolean;
   icon: React.ComponentType<{
     size: number;
     style?: React.CSSProperties;
@@ -30,12 +42,6 @@ interface Order {
   qty: number;
   status: "Approved" | "Pending" | "Rejected" | "Processing";
   amount: number;
-}
-
-interface Category {
-  name: string;
-  trend: number;
-  description: string;
 }
 
 // Constants for styling
@@ -56,105 +62,6 @@ const COLORS = {
   primaryDark: "#4338ca",
 };
 
-const stats: Stat[] = [
-  {
-    label: "Total Revenue",
-    value: 35078,
-    change: 27.4,
-    trend: "up",
-    icon: DollarSign,
-    color: "#4f46e5",
-    bg: "#eef2ff",
-    desc: "This month",
-  },
-  {
-    label: "Total Orders",
-    value: "18,800",
-    change: -12.4,
-    trend: "down",
-    icon: ShoppingBag,
-    color: "#f97316",
-    bg: "#fff7ed",
-    desc: "In progress",
-  },
-  {
-    label: "Total Customers",
-    value: "78,250",
-    change: 70.5,
-    trend: "up",
-    icon: Users,
-    color: "#22c55e",
-    bg: "#f0fdf4",
-    desc: "New this month",
-  },
-  {
-    label: "Page Views",
-    value: "442K",
-    change: 59.3,
-    trend: "up",
-    icon: TrendingUp,
-    color: "#8b5cf6",
-    bg: "#f5f3ff",
-    desc: "From last month",
-  },
-];
-
-const recentOrders: Order[] = [
-  {
-    id: "#84564564",
-    product: "Fender Stratocaster",
-    qty: 2,
-    status: "Rejected",
-    amount: 2998,
-  },
-  {
-    id: "#84564565",
-    product: "Yamaha P-515 Digital Piano",
-    qty: 5,
-    status: "Pending",
-    amount: 7495,
-  },
-  {
-    id: "#84564566",
-    product: "Pearl Export Drum Kit",
-    qty: 3,
-    status: "Approved",
-    amount: 2697,
-  },
-  {
-    id: "#84564567",
-    product: "Shure SM7dB Microphone",
-    qty: 8,
-    status: "Approved",
-    amount: 3992,
-  },
-  {
-    id: "#84564568",
-    product: "Pioneer DDJ-REV7 Controller",
-    qty: 1,
-    status: "Processing",
-    amount: 1299,
-  },
-];
-
-const topCategories: Category[] = [
-  {
-    name: "Amplifier",
-    trend: 45.14,
-    description: "Top seller for live setups this month.",
-  },
-  {
-    name: "Microphone",
-    trend: 28.3,
-    description: "Strong demand for studio and stage microphones.",
-  },
-  {
-    name: "Portable Speaker",
-    trend: -0.5,
-    description: "Slight dip, but still a popular category.",
-  },
-];
-
 const statusStyle: Record<string, { bg: string; color: string }> = {
   approved: { bg: COLORS.green.light, color: COLORS.green.dark },
   pending: { bg: "#fef3c7", color: "#b45309" },
@@ -162,7 +69,51 @@ const statusStyle: Record<string, { bg: string; color: string }> = {
   processing: { bg: "#e0e7ff", color: "#4338ca" },
 };
 
-// Component for stat card
+// Pure helpers
+function getDateParams(period: string) {
+  const end = new Date();
+  const start = new Date();
+  switch (period) {
+    case "week":
+      start.setDate(end.getDate() - 6);
+      break;
+    case "year":
+      start.setMonth(0, 1);
+      break;
+    default:
+      start.setDate(end.getDate() - 29);
+  }
+  return {
+    startDate: start.toISOString().split("T")[0],
+    endDate: end.toISOString().split("T")[0],
+  };
+}
+
+function getPrevDateParams(period: string) {
+  const curr = getDateParams(period);
+  const s = new Date(curr.startDate);
+  const e = new Date(curr.endDate);
+  const diffMs = e.getTime() - s.getTime();
+  const prevEnd = new Date(s.getTime() - 86400000);
+  const prevStart = new Date(prevEnd.getTime() - diffMs);
+  return {
+    startDate: prevStart.toISOString().split("T")[0],
+    endDate: prevEnd.toISOString().split("T")[0],
+  };
+}
+
+function mapStatus(status: ApiOrder["status"]): Order["status"] {
+  if (status === "Completed") return "Approved";
+  if (status === "Cancelled") return "Rejected";
+  return status as "Pending" | "Processing";
+}
+
+function pctChange(current: number, prev: number): number {
+  if (prev === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - prev) / prev) * 1000) / 10;
+}
+
+// Sub-components
 const StatCard = ({ stat }: { stat: Stat }) => {
   const Icon = stat.icon;
   const isUp = stat.trend === "up";
@@ -227,7 +178,11 @@ const StatCard = ({ stat }: { stat: Stat }) => {
             margin: "0 0 0.25rem 0",
           }}
         >
-          {typeof stat.value === "number" ? formatINR(stat.value) : stat.value}
+          {typeof stat.value === "number"
+            ? stat.currency
+              ? formatINR(stat.value)
+              : stat.value.toLocaleString("en-IN")
+            : stat.value}
         </p>
         <p
           style={{
@@ -253,68 +208,68 @@ const StatCard = ({ stat }: { stat: Stat }) => {
   );
 };
 
-// Component for category item
-const CategoryItem = ({ category }: { category: Category }) => {
-  const isUp = category.trend > 0;
-
-  return (
-    <div
+const TopProductItem = ({
+  product,
+  rank,
+}: {
+  product: TopProduct;
+  rank: number;
+}) => (
+  <div
+    style={{
+      padding: "0.75rem",
+      borderRadius: 6,
+      transition: "all 0.2s ease",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.75rem",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.background = COLORS.slate[50];
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.background = "transparent";
+    }}
+  >
+    <span
       style={{
-        padding: "0.75rem",
-        borderRadius: 6,
-        transition: "all 0.2s ease",
-        cursor: "pointer",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = COLORS.slate[50];
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = "transparent";
+        width: 24,
+        height: 24,
+        borderRadius: "50%",
+        background: COLORS.slate[100],
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        color: COLORS.slate[600],
+        flexShrink: 0,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "0.5rem",
-          marginBottom: "0.25rem",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            color: COLORS.dark,
-          }}
-        >
-          {category.name}
-        </span>
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            color: isUp ? COLORS.green.dark : COLORS.red.dark,
-          }}
-        >
-          {isUp ? "↑" : "↓"} {Math.abs(category.trend)}%
-        </span>
-      </div>
+      {rank}
+    </span>
+    <div style={{ flex: 1, minWidth: 0 }}>
       <p
         style={{
-          fontSize: "0.75rem",
-          color: COLORS.slate[400],
-          margin: 0,
-          lineHeight: 1.4,
+          fontSize: "0.875rem",
+          fontWeight: 600,
+          color: COLORS.dark,
+          margin: "0 0 0.25rem 0",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
+        title={product.name}
       >
-        {category.description}
+        {product.name}
+      </p>
+      <p style={{ fontSize: "0.75rem", color: COLORS.slate[400], margin: 0 }}>
+        {product.unitsSold} units · {formatINR(product.totalRevenue)}
       </p>
     </div>
-  );
-};
+  </div>
+);
 
-// Component for order row
 const OrderRow = ({ order, isLast }: { order: Order; isLast: boolean }) => {
   const s = statusStyle[order.status.toLowerCase()] || {
     bg: COLORS.border,
@@ -407,6 +362,174 @@ const OrderRow = ({ order, isLast }: { order: Order; isLast: boolean }) => {
 };
 
 export default function Dashboard() {
+  const [revenuePeriod, setRevenuePeriod] = useState("month");
+  const [loading, setLoading] = useState(true);
+  const [revenueData, setRevenueData] = useState<RevenuePoint[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [prevRevenue, setPrevRevenue] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [prevOrders, setPrevOrders] = useState(0);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [newSignups, setNewSignups] = useState(0);
+  const [prevSignups, setPrevSignups] = useState(0);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const periodChangedRef = useRef(false);
+
+  // Initial load: all stats + recent orders + top products (default month)
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const params = getDateParams("month");
+        const prevParams = getPrevDateParams("month");
+        const [
+          revenueRes,
+          prevRevenueRes,
+          ordersRes,
+          prevOrdersRes,
+          customersRes,
+          prevCustomersRes,
+          ordersListRes,
+          topProductsRes,
+        ] = await Promise.all([
+          fetchRevenueAnalytics(params),
+          fetchRevenueAnalytics(prevParams),
+          fetchOrdersAnalytics(params),
+          fetchOrdersAnalytics(prevParams),
+          fetchCustomersAnalytics(params),
+          fetchCustomersAnalytics(prevParams),
+          fetchOrders({ limit: 5 }),
+          fetchTopProductsAnalytics(3),
+        ]);
+
+        setTotalRevenue(revenueRes.totalRevenue);
+        setPrevRevenue(prevRevenueRes.totalRevenue);
+        setTotalOrders(ordersRes.totalOrders);
+        setPrevOrders(prevOrdersRes.totalOrders);
+        setTotalCustomers(customersRes.totalCustomers);
+        setNewSignups(customersRes.newSignups);
+        setPrevSignups(prevCustomersRes.newSignups);
+        setRevenueData(revenueRes.dailyRevenue);
+        setTopProducts(topProductsRes.topProducts);
+
+        setRecentOrders(
+          ordersListRes.orders.map((o) => ({
+            id: `#${o.id.slice(-8).toUpperCase()}`,
+            product: o.items[0]?.name ?? "—",
+            qty: o.items.reduce((s, item) => s + item.quantity, 0),
+            status: mapStatus(o.status),
+            amount: o.totalAmount,
+          })),
+        );
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  // Refetch revenue chart when period selector changes
+  useEffect(() => {
+    if (!periodChangedRef.current) {
+      periodChangedRef.current = true;
+      return;
+    }
+    const loadRevenue = async () => {
+      try {
+        const params = getDateParams(revenuePeriod);
+        const res = await fetchRevenueAnalytics(params);
+        setRevenueData(res.dailyRevenue);
+      } catch (err) {
+        console.error("Revenue fetch error:", err);
+      }
+    };
+    loadRevenue();
+  }, [revenuePeriod]);
+
+  const revenueChartData = useMemo(
+    () =>
+      revenueData.map((item) => ({
+        label: new Date(item.date).toLocaleDateString("en-IN", {
+          month: "short",
+          day: "2-digit",
+        }),
+        revenue: item.revenue,
+      })),
+    [revenueData],
+  );
+
+  const revenueChange = pctChange(totalRevenue, prevRevenue);
+  const ordersChange = pctChange(totalOrders, prevOrders);
+  const signupsChange = pctChange(newSignups, prevSignups);
+
+  const stats: Stat[] = [
+    {
+      label: "Total Revenue",
+      value: totalRevenue,
+      change: Math.abs(revenueChange),
+      trend: revenueChange >= 0 ? "up" : "down",
+      currency: true,
+      icon: DollarSign,
+      color: "#4f46e5",
+      bg: "#eef2ff",
+      desc: "vs. last period",
+    },
+    {
+      label: "Total Orders",
+      value: totalOrders,
+      change: Math.abs(ordersChange),
+      trend: ordersChange >= 0 ? "up" : "down",
+      icon: ShoppingBag,
+      color: "#f97316",
+      bg: "#fff7ed",
+      desc: "This month",
+    },
+    {
+      label: "Total Customers",
+      value: totalCustomers,
+      change: Math.abs(signupsChange),
+      trend: signupsChange >= 0 ? "up" : "down",
+      icon: Users,
+      color: "#22c55e",
+      bg: "#f0fdf4",
+      desc: "All time",
+    },
+    {
+      label: "New Signups",
+      value: newSignups,
+      change: Math.abs(signupsChange),
+      trend: signupsChange >= 0 ? "up" : "down",
+      icon: TrendingUp,
+      color: "#8b5cf6",
+      bg: "#f5f3ff",
+      desc: "vs. last period",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <>
+        <style>{`.spin{animation:spin 0.9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 400,
+            color: COLORS.primary,
+            gap: "0.625rem",
+            fontWeight: 600,
+          }}
+        >
+          <Loader2 size={20} className="spin" /> Loading dashboard...
+        </div>
+      </>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
       {/* Header */}
@@ -453,7 +576,11 @@ export default function Dashboard() {
           aria-label="Current date filter"
         >
           <Calendar size={14} strokeWidth={2} />
-          March 10, 2026
+          {new Date().toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
         </button>
       </div>
 
@@ -470,7 +597,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Charts & Categories */}
+      {/* Charts & Top Products */}
       <div
         style={{
           display: "grid",
@@ -508,7 +635,8 @@ export default function Dashboard() {
               Revenue
             </h3>
             <select
-              defaultValue="month"
+              value={revenuePeriod}
+              onChange={(e) => setRevenuePeriod(e.target.value)}
               style={
                 {
                   padding: "0.375rem 1.75rem 0.375rem 0.625rem",
@@ -533,11 +661,11 @@ export default function Dashboard() {
             </select>
           </div>
           <div style={{ height: 240, minWidth: 0, overflow: "visible" }}>
-            <SalesChart />
+            <SalesChart data={revenueChartData} />
           </div>
         </div>
 
-        {/* Top Categories */}
+        {/* Top Products */}
         <div
           style={{
             background: "#ffffff",
@@ -554,14 +682,27 @@ export default function Dashboard() {
               margin: "0 0 1rem 0",
             }}
           >
-            Top Categories
+            Top Products
           </h3>
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+            style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
           >
-            {topCategories.map((cat) => (
-              <CategoryItem key={cat.name} category={cat} />
-            ))}
+            {topProducts.length > 0 ? (
+              topProducts.map((p, i) => (
+                <TopProductItem key={p.productId} product={p} rank={i + 1} />
+              ))
+            ) : (
+              <p
+                style={{
+                  color: COLORS.slate[400],
+                  fontSize: "0.875rem",
+                  padding: "0.75rem",
+                  margin: 0,
+                }}
+              >
+                No sales data available
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -627,81 +768,55 @@ export default function Dashboard() {
                   background: COLORS.slate[50],
                 }}
               >
-                <th
-                  style={{
-                    padding: "0.875rem 1.25rem",
-                    textAlign: "left",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    color: COLORS.slate[500],
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  Order
-                </th>
-                <th
-                  style={{
-                    padding: "0.875rem 1.25rem",
-                    textAlign: "left",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    color: COLORS.slate[500],
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  Product
-                </th>
-                <th
-                  style={{
-                    padding: "0.875rem 1.25rem",
-                    textAlign: "center",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    color: COLORS.slate[500],
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  Qty
-                </th>
-                <th
-                  style={{
-                    padding: "0.875rem 1.25rem",
-                    textAlign: "left",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    color: COLORS.slate[500],
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  Status
-                </th>
-                <th
-                  style={{
-                    padding: "0.875rem 1.25rem",
-                    textAlign: "right",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    color: COLORS.slate[500],
-                    textTransform: "uppercase",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  Amount
-                </th>
+                {["Order", "Product", "Qty", "Status", "Amount"].map(
+                  (col, i) => (
+                    <th
+                      key={col}
+                      style={{
+                        padding: "0.875rem 1.25rem",
+                        textAlign:
+                          i === 2
+                            ? "center"
+                            : i === 4
+                              ? "right"
+                              : "left",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        color: COLORS.slate[500],
+                        textTransform: "uppercase",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {col}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map((order, idx) => (
-                <OrderRow
-                  key={order.id}
-                  order={order}
-                  isLast={idx === recentOrders.length - 1}
-                />
-              ))}
+              {recentOrders.length > 0 ? (
+                recentOrders.map((order, idx) => (
+                  <OrderRow
+                    key={order.id}
+                    order={order}
+                    isLast={idx === recentOrders.length - 1}
+                  />
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={5}
+                    style={{
+                      padding: "2rem",
+                      textAlign: "center",
+                      color: COLORS.slate[400],
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    No recent orders
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

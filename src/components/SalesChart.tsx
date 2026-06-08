@@ -9,16 +9,14 @@ import {
 } from "recharts";
 import { formatINR } from "../lib/utils";
 
-const data = [
-  { month: "Jan", revenue: 18500 },
-  { month: "Feb", revenue: 22000 },
-  { month: "Mar", revenue: 19800 },
-  { month: "Apr", revenue: 27000 },
-  { month: "May", revenue: 31500 },
-  { month: "Jun", revenue: 24000 },
-  { month: "Jul", revenue: 29000 },
-  { month: "Aug", revenue: 35078 },
-];
+interface ChartPoint {
+  label: string;
+  revenue: number;
+}
+
+interface SalesChartProps {
+  data: ChartPoint[];
+}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -49,7 +47,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export default function SalesChart() {
+export default function SalesChart({ data }: SalesChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
@@ -65,7 +63,7 @@ export default function SalesChart() {
           vertical={false}
         />
         <XAxis
-          dataKey="month"
+          dataKey="label"
           tick={{
             fontSize: 12,
             fill: "#94a3b8",
